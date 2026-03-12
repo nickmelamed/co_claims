@@ -1,0 +1,7 @@
+aiohttp
+requests
+pandas
+beautifulsoup4
+python-dateutil
+brotlicffi
+boto3
