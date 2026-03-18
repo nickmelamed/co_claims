@@ -9,7 +9,7 @@ from logger_utils import get_logger
 
 # Configuration
 AWS_REGION = os.getenv("AWS_REGION", "us-east-1")
-LLM_MODEL = os.getenv("LLM_MODEL", "us.cohere.embed-v4:0")
+LLM_MODEL = os.getenv("LLM_MODEL", "us.amazon.nova-2-lite-v1:0")
 AUTH_TOKEN = os.getenv("AUTH_TOKEN")
 
 # Initialize
@@ -93,7 +93,8 @@ def chat(request: ChatRequest, authorized: bool = Depends(verify_auth)):
 @app.get("/health")
 def health():
    """Health check."""
-   return {"service": "ok", "region": AWS_REGION, "model": LLM_MODEL}
+   bedrock = boto3.client("bedrock", region_name="us-west-2")
+   return {"service": "ok", "region": AWS_REGION, "model": bedrock.list_foundation_models()}
 
 
 if __name__ == "__main__":

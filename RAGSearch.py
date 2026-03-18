@@ -38,6 +38,7 @@ class RAGSearcher:
 
     def embed_query(self, query: str) -> List[float]:
         """Convert query text to vector embedding using Amazon Bedrock."""
+        self.logger.info(f"we make it here to the embed_query function")
         response = self.bedrock.invoke_model(
             modelId=self.embed_model,
             body=json.dumps({
@@ -59,7 +60,7 @@ class RAGSearcher:
         """
         query_vector = self.embed_query(query)
 
-
+        self.logger.info(f"we make it here to the query_points function")
         results = self.qdrant.query_points(
             collection_name=self.collection_name,
             query=query_vector,
@@ -67,16 +68,16 @@ class RAGSearcher:
         )
         matches = []
         points = results.points
-        #self.logger.info(f"These are points {points}")
+        self.logger.info(f"These are points {points}")
 
         for point in points:
             payload = point.payload or {}
             matches.append(
                 {
-                    "text": payload.text,
+                    "text": payload["text"],
                     "score": point.score,
-                    "s3_key": payload.s3_key,
-                    "chunk_index": payload.chunk_index,
+                    "s3_key": payload["s3_key"],
+                    "chunk_index": payload['chunk_index'],
                 }
             )
         return matches
