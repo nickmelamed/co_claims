@@ -5,19 +5,21 @@ from fastapi import FastAPI, HTTPException, Header, Depends
 from pydantic import BaseModel
 from RAGIngest import RAGIngestor
 from RAGSearch import RAGSearcher
+from logger_utils import get_logger
 
 # Configuration
 AWS_REGION = os.getenv("AWS_REGION", "us-east-1")
-LLM_MODEL = os.getenv("LLM_MODEL", "anthropic.claude-3-5-haiku-20241022-v1:0")
+LLM_MODEL = os.getenv("LLM_MODEL", "us.cohere.embed-v4:0")
 AUTH_TOKEN = os.getenv("AUTH_TOKEN")
 
 # Initialize
 app = FastAPI(title="RAG AI Search Service", version="1.0.0")
 bedrock = boto3.client("bedrock-runtime", region_name=AWS_REGION)
+logger = get_logger("RAGService")
 
 # Initialize RAG components (using default index name "knowledge")
 ingestor = RAGIngestor(aws_region=AWS_REGION)
-searcher = RAGSearcher(aws_region=AWS_REGION)
+searcher = RAGSearcher(collection_name="knowledge", aws_region=AWS_REGION)
 
 
 def verify_auth(authorization: str = Header(None)):
@@ -49,11 +51,13 @@ class ChatResponse(BaseModel):
 @app.post("/ingest")
 def ingest(request: IngestRequest, authorized: bool = Depends(verify_auth)):
    """Ingest documents from S3."""
+   logger.info(f"Ingesting documents from S3: {request.bucket} {request.prefix}")
    try:
        ingestor.create_collection()
        stats = ingestor.ingest_from_s3(request.bucket, request.prefix)
        return {"status": "success", "statistics": stats}
    except Exception as e:
+       logger.error(f"Error ingesting documents: {str(e)}")
        raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -82,6 +86,7 @@ def chat(request: ChatRequest, authorized: bool = Depends(verify_auth)):
       
        return ChatResponse(query=request.query, answer=answer, sources=sources, context_used=context)
    except Exception as e:
+       logger.error(f"Error answering question: {str(e)}")
        raise HTTPException(status_code=500, detail=str(e))
 
 

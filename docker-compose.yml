@@ -1,9 +1,44 @@
 services:
- qdrant:
-   image: qdrant/qdrant:latest
-   container_name: qdrant
-   ports:
-     - "6333:6333"
-   volumes:
-     - ./qdrant_storage:/qdrant/storage
-   restart: always
+  rag-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: rag-service
+    ports:
+      - "8000:8000"
+    environment:
+      - PINECONE_API_KEY=${PINECONE_API_KEY}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_REGION=${AWS_REGION:-us-east-1}
+      - AWS_BEARER_TOKEN_BEDROCK=${AWS_BEARER_TOKEN_BEDROCK}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - EMBED_MODEL=${EMBED_MODEL:-amazon.titan-embed-text-v2:0}
+      - QDRANT_URL=${QDRANT_URL:-http://qdrant:6333}
+      - AUTH_TOKEN=${AUTH_TOKEN} 
+    restart: unless-stopped
+    depends_on:
+      - qdrant
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    environment:
+      - QDRANT_API_KEY=${QDRANT_API_KEY}
+    restart: unless-stopped
+
+
+  streamlit-ui:
+    build:
+      context: .
+      dockerfile: Dockerfile.ui
+    container_name: streamlit-ui
+    ports:
+      - "8501:8501"
+    depends_on:
+      - rag-service
+    environment:
+      - AUTH_TOKEN=${AUTH_TOKEN}
+    restart: unless-stopped
