@@ -19,6 +19,8 @@ services:
     restart: unless-stopped
     depends_on:
       - qdrant
+    volumes:
+      - ./logs:/app/logs
 
   qdrant:
     image: qdrant/qdrant:latest

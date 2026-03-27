@@ -67,7 +67,7 @@ def call_chat_api(query: str, top_k: int = 5, temperature: float = 0.7):
        return {"error": f"Unexpected error: {str(e)}"}
 
 
-def trigger_ingestion(bucket: str = "capstone-data", prefix: str = "rag-files/"):
+def trigger_ingestion(bucket: str = "co-claims-scraped-data", prefix: str = "mdna_facts_v2_first100.csv"):
    """Trigger document ingestion."""
    try:
        response = requests.post(
@@ -104,8 +104,8 @@ with st.sidebar:
    # Ingestion
    st.subheader("📥 Data Ingestion")
    with st.expander("Ingest Documents"):
-       bucket = st.text_input("S3 Bucket", value="capstone-data")
-       prefix = st.text_input("S3 Prefix", value="rag-files/")
+       bucket = st.text_input("S3 Bucket", value="co-claims-scraped-data")
+       prefix = st.text_input("S3 Prefix", value="mdna_facts_v2_first100.csv")
       
        if st.button("Start Ingestion"):
            with st.spinner("Ingesting documents..."):

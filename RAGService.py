@@ -30,8 +30,8 @@ def verify_auth(authorization: str = Header(None)):
 
 
 class IngestRequest(BaseModel):
-   bucket: Optional[str] = "capstone-data"
-   prefix: Optional[str] = "rag-files/"
+   bucket: Optional[str] = "co-claims-scraped-data"
+   prefix: Optional[str] = "mdna_facts_v2_first100.csv"
 
 
 class ChatRequest(BaseModel):

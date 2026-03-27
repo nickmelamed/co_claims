@@ -12,8 +12,8 @@ def _get_run_log_file() -> Path:
     global _RUN_LOG_FILE
 
     if _RUN_LOG_FILE is None:
-        log_dir = Path("logs")
-        log_dir.mkdir(exist_ok=True)
+        log_dir = Path(os.getenv("LOG_DIR", "logs"))
+        log_dir.mkdir(parents=True, exist_ok=True)
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         _RUN_LOG_FILE = log_dir / f"rag_service_{timestamp}.log"
 
