@@ -33,9 +33,9 @@ class ClaimEvaluator:
             if r < TAU_R:
                 continue
 
-            s = self.support.score(claim_f, ef)
-            c = self.contradiction.score(claim_f, ef)
-            s, c = self.metrics.normalize(s, c)
+            judge_out = self.judge.score(claim, e["text"])
+            s = judge_out["entailment"]
+            c = judge_out["contradiction"]
 
             relevances.append(r)
             supports.append(s)
