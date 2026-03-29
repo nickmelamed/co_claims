@@ -1,3 +1,5 @@
+import json
+
 JUDGE_PROMPT = """
 
 ROLE: 
@@ -43,3 +45,36 @@ RULES:
 - Only base your evaluation on the provided evidence. Do NOT use any outside information. 
 
 """
+
+MODEL = "gpt-4o-mini" # placeholder model 
+
+class LLMJudge:
+    def __init__(self, client, model=MODEL):
+        self.client = client
+        self.model = model
+
+    def score(self, claim, evidence):
+        prompt = JUDGE_PROMPT.format(
+            claim=claim,
+            evidence=evidence
+        )
+
+        response = self.client.chat.completions.create(
+            model=self.model,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0
+        )
+
+        text = response.choices[0].message.content
+
+        # robust JSON extraction
+        try:
+            json_str = text.split("<json>")[-1].strip()
+            return json.loads(json_str)
+        except:
+            return {
+                "entailment": 0,
+                "contradiction": 0,
+                "confidence": 0,
+                "rationale": "parse_error"
+            }
