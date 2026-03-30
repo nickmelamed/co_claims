@@ -1,3 +1,6 @@
+import json 
+from base import BaseJudge
+
 class MixtralJudge(BaseJudge):
     def __init__(self, client):
         self.client = client
@@ -11,7 +14,6 @@ class MixtralJudge(BaseJudge):
         return self._parse(response)
 
     def _parse(self, response):
-        import json
         try:
             text = response.choices[0].message.content
             return json.loads(text.split("<json>")[-1])
