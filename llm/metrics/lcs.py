@@ -15,9 +15,11 @@ Score from 0 to 1:
 1 = fully logically consistent
 0 = internally contradictory
 
+Also provide confidence in your judgment.
+
 Output:
 <json>
-{{"score": float}}
+{{"score": float, "confidence": float}}
 </json>
 """
 
@@ -28,6 +30,6 @@ class LCS_LLM:
 
     def score(self, claim):
         result = self.ensemble.evaluate(
-            LCS_PROMPT.format(claim=claim)
-        )
-        return result.get("entailment_mean", 1.0)
+        LCS_PROMPT.format(claim=claim),
+        field="score")
+        return result["mean"]

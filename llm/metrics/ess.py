@@ -13,9 +13,11 @@ Score from 0 to 1:
 0 = no support
 1 = strong direct support
 
+Also provide confidence in your judgment.
+
 Output:
 <json>
-{{"score": float}}
+{{"score": float, "confidence": float}}
 </json>
 """
 
@@ -26,9 +28,9 @@ class ESS_LLM:
 
     def score_evidence(self, claim, evidence):
         result = self.ensemble.evaluate(
-            ESS_PROMPT.format(claim=claim, evidence=evidence)
-        )
-        return result.get("entailment_mean", 0.0)
+        ESS_PROMPT.format(claim=claim, evidence=evidence),
+        field="score")
+        return result["mean"]
 
     def score(self, claim, evidence_list, relevances):
         scores = []

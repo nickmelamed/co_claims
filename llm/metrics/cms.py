@@ -15,9 +15,11 @@ Score from 0 to 1:
 0 = not measurable
 1 = fully measurable
 
+Also provide confidence in your judgment.
+
 Output:
 <json>
-{{"score": float}}
+{{"score": float, "confidence": float}}
 </json>
 """
 
@@ -28,6 +30,6 @@ class CMS_LLM:
 
     def score(self, claim):
         result = self.ensemble.evaluate(
-            CMS_PROMPT.format(claim=claim)
-        )
-        return result.get("entailment_mean", 0.0)
+        CMS_PROMPT.format(claim=claim),
+        field="score")
+        return result["mean"]

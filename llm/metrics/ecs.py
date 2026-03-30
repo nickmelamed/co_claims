@@ -13,9 +13,11 @@ Score from 0 to 1:
 0 = no contradiction
 1 = direct contradiction
 
+Also provide confidence in your judgment.
+
 Output:
 <json>
-{{"score": float}}
+{{"score": float, "confidence": float}}
 </json>
 """
 
@@ -26,9 +28,10 @@ class ECS_LLM:
 
     def score_evidence(self, claim, evidence):
         result = self.ensemble.evaluate(
-            ECS_PROMPT.format(claim=claim, evidence=evidence)
-        )
-        return result.get("contradiction_mean", 0.0)
+        ECS_PROMPT.format(claim=claim, evidence=evidence),
+        field="score")
+        
+        return result["mean"]
 
     def score(self, claim, evidence_list, relevances):
         scores = []

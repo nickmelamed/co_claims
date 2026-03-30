@@ -15,9 +15,11 @@ Score from 0 to 1:
 1 = no hedging (very confident, direct claim)
 0 = highly hedged (uncertain, vague claim)
 
+Also provide confidence in your judgment.
+
 Output:
 <json>
-{{"score": float}}
+{{"score": float, "confidence": float}}
 </json>
 """
 
@@ -28,8 +30,6 @@ class HLS_LLM:
 
     def score(self, claim):
         result = self.ensemble.evaluate(
-            HLS_PROMPT.format(claim=claim)
-        )
-
-        # using entailment_mean as generic "score"
-        return result.get("entailment_mean", 1.0)
+        HLS_PROMPT.format(claim=claim),
+        field="score")
+        return result["mean"]
