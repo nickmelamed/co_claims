@@ -56,29 +56,42 @@ class EvaluationPipeline:
             filtered_relevances
         )
 
+        metrics = metric_outputs['metrics']
+        uncertainty = metric_outputs['uncertainty']
+
         # uncertainty analysis 
         uncertainty = self.uncertainty.analyze(metric_outputs)
 
-        # escalation decision 
-        decision = self.router.decide(uncertainty)
 
-        if decision == "escalate":
-            # placeholder for deeper evaluation
-            pass
+        # adaptive escalation decision 
+        decision_obj = self.router.decide(
+            metrics,
+            uncertainty,
+            len(filtered_evidence)
+        )
 
-        # aggregation
+        # escalation actions 
+        if decision_obj["decision"] == "escalate":
+
+            if "more_evidence" in decision_obj["actions"]:
+                new_evidence = self.retriever.retrieve(claim, extra=True)
+                filtered_evidence.extend(new_evidence)
+
+            if "refine_claim" in decision_obj["actions"]:
+                claim = self.reasoner.structure(claim).get("refined_claim", claim)
+
+            if "debate" in decision_obj["actions"]:
+                debate_output = self.debate_engine.run(claim, filtered_evidence)
+                adjudicated = self.adjudicator.decide(claim, debate_output)
+
+                metrics["ESS"] = adjudicated.get("support_score", metrics["ESS"])
+                metrics["ECS"] = adjudicated.get("contradiction_score", metrics["ECS"])
+
+        # aggregation 
         n = len(filtered_evidence)
 
-        evidence_score = (
-            metric_outputs["ESS"]
-            + metric_outputs["ECS"]
-        ) / 2
-
-        claim_score = (
-            metric_outputs["CMS"]
-            + metric_outputs["LCS"]
-            + metric_outputs["HLS"]
-        ) / 3
+        evidence_score = (metrics["ESS"] + metrics["ECS"]) / 2
+        claim_score = (metrics["CMS"] + metrics["LCS"] + metrics["HLS"]) / 3
 
         credibility = self.aggregator.credibility(
             evidence_score,
@@ -86,12 +99,10 @@ class EvaluationPipeline:
             n
         )
 
-        # outputs 
         return {
-            "metrics": metric_outputs,
+            "metrics": metrics,
             "uncertainty": uncertainty,
-            "decision": decision,
+            "decision": decision_obj,
             "credibility": credibility,
-            "n_evidence": n,
-            "structured_claim": structured
+            "structured": structured
         }
