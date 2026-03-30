@@ -30,6 +30,7 @@ class CMS_LLM:
 
     def score(self, claim):
         result = self.ensemble.evaluate(
-        CMS_PROMPT.format(claim=claim),
-        field="score")
-        return result["mean"]
+            CMS_PROMPT.format(claim=claim),
+            field="score"
+        )
+        return result["mean"], result["variance"]

@@ -1,4 +1,5 @@
 from .utils import extract_json, safe_mean
+import numpy as np
 
 ECS_PROMPT = """
 Evaluate how strongly the evidence contradicts the claim.
@@ -22,27 +23,33 @@ Output:
 """
 
 
-class ECS_LLM:
+class ESS_LLM:
+    
     def __init__(self, ensemble):
         self.ensemble = ensemble
 
     def score_evidence(self, claim, evidence):
         result = self.ensemble.evaluate(
-        ECS_PROMPT.format(claim=claim, evidence=evidence),
-        field="score")
-        
-        return result["mean"]
+            ECS_PROMPT.format(claim=claim, evidence=evidence),
+            field="score"
+        )
+        return result
 
     def score(self, claim, evidence_list, relevances):
         scores = []
         weights = []
+        variances = []
 
         for e, r in zip(evidence_list, relevances):
-            c = self.score_evidence(claim, e["text"])
-            scores.append(c)
+            res = self.score_evidence(claim, e["text"])
+
+            scores.append(res["mean"])
             weights.append(r)
+            variances.append(res["variance"])
 
         if not scores:
-            return 0.0
+            return 0.0, 1.0
 
-        return sum(c * w for c, w in zip(scores, weights)) / (sum(weights) + 1e-6)
+        weighted_score = sum(s * w for s, w in zip(scores, weights)) / (sum(weights) + 1e-6)
+
+        return weighted_score, np.mean(variances)

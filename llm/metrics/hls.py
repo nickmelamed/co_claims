@@ -30,6 +30,7 @@ class HLS_LLM:
 
     def score(self, claim):
         result = self.ensemble.evaluate(
-        HLS_PROMPT.format(claim=claim),
-        field="score")
-        return result["mean"]
+            HLS_PROMPT.format(claim=claim),
+            field="score"
+        )
+        return result["mean"], result["variance"]
