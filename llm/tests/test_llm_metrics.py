@@ -57,3 +57,16 @@ def test_uncertainty_present(executor):
     result = executor.evaluate(claim, evidence, relevances)
 
     assert "mean_variance" in result["uncertainty"]
+
+def test_support_vs_contradiction_direction(executor):
+    claim = "Model improves accuracy"
+
+    supportive = [{"text": "Accuracy improves by 5%"}]
+    contradictory = [{"text": "Accuracy decreases by 5%"}]
+
+    rel = [1.0]
+
+    res1 = executor.evaluate(claim, supportive, rel)
+    res2 = executor.evaluate(claim, contradictory, rel)
+
+    assert res1["metrics"]["ESS"] >= res2["metrics"]["ESS"]
