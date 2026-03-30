@@ -1,39 +1,97 @@
 class EvaluationPipeline:
-    def __init__(self, retriever, reasoner, triage, metrics, uncertainty, router):
+    def __init__(
+        self,
+        retriever,
+        embed_fn,
+        reasoner,
+        triage,
+        metric_executor,
+        uncertainty_analyzer,
+        escalation_router,
+        aggregator
+    ):
         self.retriever = retriever
+        self.embed_fn = embed_fn
         self.reasoner = reasoner
         self.triage = triage
-        self.metrics = metrics
-        self.uncertainty = uncertainty
-        self.router = router
+        self.metrics = metric_executor
+        self.uncertainty = uncertainty_analyzer
+        self.router = escalation_router
+        self.aggregator = aggregator
 
     def run(self, claim):
-        # Retrieval
-        evidence = self.retriever.retrieve(claim)
+        # retrieval 
+        evidence_list = self.retriever.retrieve(claim)
 
-        # Structuring
+        # structuring (LLM-reasoning)
         structured = self.reasoner.structure(claim)
 
-        # Triage
-        filtered = self.triage.filter(...)
+        # relevance score
+        claim_embedding = self.embed_fn(claim)
 
-        # Metrics
-        ess, ecs = self.metrics.score_evidence(claim, filtered)
-        cms = self.metrics.score_claim(claim)
+        relevances = []
+        for e in evidence_list:
+            r = e.get("relevance")
+            if r is None:
+                r = self.triage.sim.relevance(
+                    claim_embedding, e["embedding"]
+                )
+            relevances.append(r)
 
-        # Uncertainty
-        unc = self.uncertainty.analyze(ess + ecs)
+        # evidence triage 
+        filtered_evidence = self.triage.filter(
+            claim_embedding,
+            evidence_list
+        )
 
-        # Escalation
-        decision = self.router.decide(unc)
+        filtered_relevances = [
+            r for e, r in zip(evidence_list, relevances)
+            if e in filtered_evidence
+        ]
+
+        # LLM metrics 
+        metric_outputs = self.metrics.evaluate(
+            claim,
+            filtered_evidence,
+            filtered_relevances
+        )
+
+        # uncertainty analysis 
+        uncertainty = self.uncertainty.analyze(metric_outputs)
+
+        # escalation decision 
+        decision = self.router.decide(uncertainty)
 
         if decision == "escalate":
-            # TODO decide our escalation decision 
+            # placeholder for deeper evaluation
             pass
 
-        # Aggregate
+        # aggregation
+        n = len(filtered_evidence)
+
+        evidence_score = (
+            metric_outputs["ESS"]
+            + metric_outputs["ECS"]
+        ) / 2
+
+        claim_score = (
+            metric_outputs["CMS"]
+            + metric_outputs["LCS"]
+            + metric_outputs["HLS"]
+        ) / 3
+
+        credibility = self.aggregator.credibility(
+            evidence_score,
+            claim_score,
+            n
+        )
+
+        # outputs 
         return {
-            "metrics": {...},
-            "uncertainty": unc,
-            "decision": decision
+            "metrics": metric_outputs,
+            "uncertainty": uncertainty,
+            "decision": decision,
+            "credibility": credibility,
+            "n_evidence": n,
+            "structured_claim": structured
         }
