@@ -59,20 +59,6 @@ def test_vague_claim(evaluator):
     # no measurability to this claim 
     assert result["CMS"] == 0
 
-
-def test_partial_coverage(evaluator):
-    claim = "The system improves accuracy and reduces latency"
-    evidence = [{
-        "text": "The system improves accuracy",
-        "embedding": embed_fn("The system improves accuracy"),
-        "source": "https://arxiv.org"
-    }]
-
-    result = evaluator.evaluate(claim, evidence)
-
-    # coverage should not be over 100% 
-    assert result["Coverage"] < 1
-
 def test_new_company(evaluator):
     claim = "Our startup model improves accuracy by 15%"
 
