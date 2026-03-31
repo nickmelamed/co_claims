@@ -1,4 +1,5 @@
 import tldextract
+from .utils.time_utils import normalize_timestamp, current_time_days
 
 from .extractor import FeatureExtractor
 from .similarity import Similarity
@@ -35,6 +36,8 @@ class ClaimEvaluator:
         domains, external_flags = [], []
         type_weights, timestamps = [], []
 
+        claim_time = current_time_days() 
+
         for e in evidence_list:
             ef = self.extractor.extract(e["text"])
             r = self.sim.relevance(claim_embedding, e["embedding"])
@@ -68,17 +71,25 @@ class ClaimEvaluator:
             type_weights.append(type_weight)
             external_flags.append(external_flag)
 
-            timestamps.append(e.get("timestamp", 0))
 
+            ts = normalize_timestamp(e.get("timestamp"))
+            if ts is not None:
+                timestamps.append(ts)
+
+                
         n = len(supports)
 
         # Evidence metrics
         ESS = self.evidence_metrics.ess(supports, relevances)
         ECS = self.evidence_metrics.ecs(contradictions, relevances)
         EAS = self.evidence_metrics.eas(n)
-        ERS = self.evidence_metrics.ers(claim_time, timestamps)
         EStS = self.evidence_metrics.ests(relevances, type_weights)
         EAgS = self.evidence_metrics.eags(supports)
+
+        if timestamps:
+            ERS = self.evidence_metrics.ers(claim_time, timestamps)
+        else:
+            ERS = 0
 
         # Source metrics
         SRS = self.source_metrics.srs(domains)
