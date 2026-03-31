@@ -141,3 +141,11 @@ def test_eags_behavior():
     inconsistent = [0.1, 0.9, 0.5]
 
     assert em.eags(consistent) > em.eags(inconsistent)
+
+def test_source_classification():
+    from evaluator.source_types import classify_source
+
+    assert classify_source("https://arxiv.org/abs/123") == "peer_reviewed"
+    assert classify_source("https://medium.com/post") == "technical_blog"
+    assert classify_source("https://huggingface.co/datasets") == "benchmark"
+    assert classify_source("https://openai.com/blog") in {"technical_blog", "marketing"}

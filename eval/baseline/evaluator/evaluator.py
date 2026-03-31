@@ -1,9 +1,10 @@
-from urllib.parse import urlparse
+import tldextract
 
 from .extractor import FeatureExtractor
 from .similarity import Similarity
 from .support import SupportScorer
 from .contradiction import ContradictionScorer
+from .source_types import classify_source, get_type_weight, is_verifiable
 from .aggregator import Aggregator
 
 from .metrics import EvidenceMetrics, SourceMetrics, ClaimMetrics
@@ -51,10 +52,22 @@ class ClaimEvaluator:
             supports.append(s)
             contradictions.append(c)
 
-            domains.append(urlparse(e["source"]).netloc)
-            external_flags.append(int("company" not in e["source"]))
+            def extract_domain(url):
+                ext = tldextract.extract(url)
+                return f"{ext.domain}.{ext.suffix}"
 
-            type_weights.append(e.get("type_weight", 0.5))
+            domains.append(extract_domain(e["source"]))
+
+            source_type = e.get("source_type", "unknown")
+
+            source_type = classify_source(e["source"], e["text"])
+
+            type_weight = get_type_weight(source_type)
+            external_flag = is_verifiable(source_type)
+
+            type_weights.append(type_weight)
+            external_flags.append(external_flag)
+
             timestamps.append(e.get("timestamp", 0))
 
         n = len(supports)
