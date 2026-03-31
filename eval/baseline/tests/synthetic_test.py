@@ -1,6 +1,9 @@
 import pytest
 from evaluator import ClaimEvaluator
 from sentence_transformers import SentenceTransformer
+import numpy as np
+from evaluator.metrics import EvidenceMetrics, SourceMetrics, ClaimMetrics
+from evaluator.contradiction import ContradictionScorer
 
 MODEL = SentenceTransformer("all-MiniLM-L6-v2")
 
@@ -108,3 +111,50 @@ def test_negation_contradiction(evaluator):
     assert result["ESS"] < 0.5
 
 
+def test_evidence_metrics():
+    em = EvidenceMetrics()
+
+    supports = [0.8, 0.6, 0.9]
+    relevances = [0.9, 0.7, 0.8]
+
+    assert 0 <= em.ess(supports, relevances) <= 1
+    assert 0 <= em.ecs(supports, relevances) <= 1
+    assert 0 <= em.eas(3) <= 1
+    assert 0 <= em.eags(supports) <= 1
+
+
+def test_source_metrics():
+    sm = SourceMetrics()
+
+    domains = ["a.com", "b.com", "a.com"]
+    flags = [1, 1, 0]
+
+    assert sm.srs(domains) == 2 / 3
+    assert sm.evs(flags) == sum(flags) / len(flags)
+
+
+def test_claim_metrics():
+    contradiction = ContradictionScorer()
+    cm = ClaimMetrics(contradiction)
+
+    claim_f = {
+        "tokens": {"model", "may", "improve", "accuracy"},
+        "entities": {"model", "accuracy"},
+        "doc": type("doc", (), {
+            "sents": [type("s", (), {"text": "model improves accuracy"})()]
+        })()
+    }
+
+    assert 0 <= cm.hls(claim_f) <= 1
+    assert 0 <= cm.cms(claim_f["entities"]) <= 1
+    assert 0 <= cm.cscope(claim_f["entities"]) <= 1
+    assert 0 <= cm.lcs(claim_f) <= 1
+
+
+def test_eags_behavior():
+    em = EvidenceMetrics()
+
+    consistent = [0.9, 0.9, 0.9]
+    inconsistent = [0.1, 0.9, 0.5]
+
+    assert em.eags(consistent) > em.eags(inconsistent)
