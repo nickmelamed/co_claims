@@ -425,89 +425,103 @@ def mark_done(s3, progress: dict, domain: str, label: str):
 
 # --- Main ---
 
-def run(start: str, end: str, resume: bool):
+def resolve_end_month(end: str) -> str:
+    if end.lower() == "now":
+        return datetime.utcnow().strftime("%Y-%m")
+    return end
+
+
+def run(start: str, end: str, resume: bool, continuous: bool):
     s3 = boto3.client("s3")
     progress = load_progress(s3) if resume else {}
 
-    for domain in SOURCES:
-        log.info(f"=== Starting {domain} ===")
+    while True:
+        end_month = resolve_end_month(end) if not continuous else datetime.utcnow().strftime("%Y-%m")
 
-        for start_dt, end_dt, week_label in week_ranges(start, end):
-            if is_done(progress, domain, week_label):
-                log.info(f"Skipping {domain} {week_label} (done)")
-                continue
+        for domain in SOURCES:
+            log.info(f"=== Starting {domain} ===")
 
-            log.info(f"Fetching {domain} week of {week_label}...")
-            articles = gdelt_request(domain, start_dt, end_dt)
-            if articles is None:
-                log.warning(f"Rate-limited on {domain} {week_label}; leaving week unmarked for retry.")
-                time.sleep(GDELT_DELAY * 2)
-                continue
+            for start_dt, end_dt, week_label in week_ranges(start, end_month):
+                if is_done(progress, domain, week_label):
+                    log.info(f"Skipping {domain} {week_label} (done)")
+                    continue
 
-            if not articles:
-                log.info(f"No articles for {domain} {week_label}")
+                log.info(f"Fetching {domain} week of {week_label}...")
+                articles = gdelt_request(domain, start_dt, end_dt)
+                if articles is None:
+                    log.warning(f"Rate-limited on {domain} {week_label}; leaving week unmarked for retry.")
+                    time.sleep(GDELT_DELAY * 2)
+                    continue
+
+                if not articles:
+                    log.info(f"No articles for {domain} {week_label}")
+                    mark_done(s3, progress, domain, week_label)
+                    time.sleep(GDELT_DELAY)
+                    continue
+
+                df = pd.DataFrame(articles)
+                if domain == "reuters.com" and "language" in df.columns:
+                    before = len(df)
+                    df = df[df["language"].fillna("").str.lower() == "english"].copy()
+                    removed = before - len(df)
+                    if removed:
+                        log.info(f"Filtered Reuters non-English rows by metadata: removed {removed}, kept {len(df)}")
+                    if df.empty:
+                        log.info(f"No English Reuters rows for {week_label} after filtering")
+                        mark_done(s3, progress, domain, week_label)
+                        time.sleep(GDELT_DELAY)
+                        continue
+
+                if domain in FINANCE_URL_FILTERS and "url" in df.columns:
+                    before = len(df)
+                    df = df[df["url"].apply(lambda u: url_passes_finance_filter(domain, u))].copy()
+                    removed = before - len(df)
+                    if removed:
+                        log.info(f"Filtered {domain} non-finance URLs: removed {removed}, kept {len(df)}")
+                    if df.empty:
+                        log.info(f"No finance URLs for {domain} {week_label} after filtering")
+                        mark_done(s3, progress, domain, week_label)
+                        time.sleep(GDELT_DELAY)
+                        continue
+
+                urls = df["url"].tolist()
+                alt_urls: list[str | None] = [None] * len(urls)
+                if domain == "cnn.com" and "url_mobile" in df.columns:
+                    mobile_urls = df["url_mobile"].fillna("").astype(str).tolist()
+                    desktop_urls = df["url"].fillna("").astype(str).tolist()
+                    urls = [m if m else d for m, d in zip(mobile_urls, desktop_urls)]
+                    alt_urls = [d if m and d and m != d else None for m, d in zip(mobile_urls, desktop_urls)]
+
+                log.info(f"Got {len(urls)} URLs. Scraping concurrently ({CONCURRENCY} at a time)...")
+                texts = asyncio.run(scrape_batch(urls, alt_urls))
+                if domain == "reuters.com":
+                    texts = [t if looks_like_article(t) else None for t in texts]
+
+                df["article_text"] = texts
+
+                out_key = s3_key(domain.replace(".", "_"), f"{week_label}.csv")
+                buf = io.StringIO()
+                df.to_csv(buf, index=False)
+                s3.put_object(Bucket=S3_BUCKET, Key=out_key, Body=buf.getvalue().encode("utf-8"))
+
+                success = sum(1 for t in texts if t)
+                log.info(f"Saved s3://{S3_BUCKET}/{out_key} — {success}/{len(df)} with text")
+
                 mark_done(s3, progress, domain, week_label)
                 time.sleep(GDELT_DELAY)
-                continue
 
-            df = pd.DataFrame(articles)
-            if domain == "reuters.com" and "language" in df.columns:
-                before = len(df)
-                df = df[df["language"].fillna("").str.lower() == "english"].copy()
-                removed = before - len(df)
-                if removed:
-                    log.info(f"Filtered Reuters non-English rows by metadata: removed {removed}, kept {len(df)}")
-                if df.empty:
-                    log.info(f"No English Reuters rows for {week_label} after filtering")
-                    mark_done(s3, progress, domain, week_label)
-                    time.sleep(GDELT_DELAY)
-                    continue
+        if not continuous:
+            break
 
-            if domain in FINANCE_URL_FILTERS and "url" in df.columns:
-                before = len(df)
-                df = df[df["url"].apply(lambda u: url_passes_finance_filter(domain, u))].copy()
-                removed = before - len(df)
-                if removed:
-                    log.info(f"Filtered {domain} non-finance URLs: removed {removed}, kept {len(df)}")
-                if df.empty:
-                    log.info(f"No finance URLs for {domain} {week_label} after filtering")
-                    mark_done(s3, progress, domain, week_label)
-                    time.sleep(GDELT_DELAY)
-                    continue
-
-            urls = df["url"].tolist()
-            alt_urls: list[str | None] = [None] * len(urls)
-            if domain == "cnn.com" and "url_mobile" in df.columns:
-                mobile_urls = df["url_mobile"].fillna("").astype(str).tolist()
-                desktop_urls = df["url"].fillna("").astype(str).tolist()
-                urls = [m if m else d for m, d in zip(mobile_urls, desktop_urls)]
-                alt_urls = [d if m and d and m != d else None for m, d in zip(mobile_urls, desktop_urls)]
-
-            log.info(f"Got {len(urls)} URLs. Scraping concurrently ({CONCURRENCY} at a time)...")
-            texts = asyncio.run(scrape_batch(urls, alt_urls))
-            if domain == "reuters.com":
-                texts = [t if looks_like_article(t) else None for t in texts]
-
-            df["article_text"] = texts
-
-            out_key = s3_key(domain.replace(".", "_"), f"{week_label}.csv")
-            buf = io.StringIO()
-            df.to_csv(buf, index=False)
-            s3.put_object(Bucket=S3_BUCKET, Key=out_key, Body=buf.getvalue().encode("utf-8"))
-
-            success = sum(1 for t in texts if t)
-            log.info(f"Saved s3://{S3_BUCKET}/{out_key} — {success}/{len(df)} with text")
-
-            mark_done(s3, progress, domain, week_label)
-            time.sleep(GDELT_DELAY)
-
-    log.info("=== All done ===")
+        log.info("No new weeks; sleeping 6 hours before next check.")
+        time.sleep(6 * 60 * 60)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="GDELT financial news scraper (S3 output)")
     parser.add_argument("--start", default="2020-01", help="Start month (YYYY-MM)")
-    parser.add_argument("--end", default="2026-03", help="End month (YYYY-MM)")
+    parser.add_argument("--end", default="now", help="End month (YYYY-MM) or 'now'")
     parser.add_argument("--resume", action="store_true", help="Resume from last progress")
+    parser.add_argument("--continuous", action="store_true", help="Continuously check for new weeks")
     args = parser.parse_args()
-    run(args.start, args.end, args.resume)
+    run(args.start, args.end, args.resume, args.continuous)
