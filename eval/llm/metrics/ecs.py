@@ -23,7 +23,7 @@ Output:
 """
 
 
-class ESS_LLM:
+class ECS_LLM:
     
     def __init__(self, ensemble):
         self.ensemble = ensemble
