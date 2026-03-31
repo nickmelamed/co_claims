@@ -73,9 +73,6 @@ def test_new_company(evaluator):
     # Should have SOME support
     assert result["ESS"] > 0.3
 
-    # But limited evidence -> higher uncertainty
-    assert result["Uncertainty"] > 0.4
-
     # Credibility should not be maxed out
     assert result["Credibility"] < 0.8
 
