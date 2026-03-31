@@ -1,9 +1,5 @@
 import numpy as np
 
-
-import numpy as np
-
-
 class JudgeEnsemble:
     def __init__(self, prometheus, mixtral):
         self.prometheus = prometheus
