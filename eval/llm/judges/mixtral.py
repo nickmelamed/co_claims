@@ -1,21 +1,19 @@
 import json 
-from base import BaseJudge
+from judges.base_judge import BaseJudge
 
 class MixtralJudge(BaseJudge):
     def __init__(self, client):
         self.client = client
 
     def evaluate(self, prompt):
-        response = self.client.chat.completions.create(
-            model="mistralai/Mixtral-8x7B-v0.1",
+        text = self.client.chat(
             messages=[{"role": "user", "content": prompt}],
-            temperature=0.3 # higher than prometheus for variety
+            temperature=0.3
         )
-        return self._parse(response)
+        return self._parse(text)
 
-    def _parse(self, response):
+    def _parse(self, text):
         try:
-            text = response.choices[0].message.content
             return json.loads(text.split("<json>")[-1])
         except:
-            return {"error": True}
+            return {"error": True, "raw": text}

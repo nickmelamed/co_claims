@@ -1,21 +1,19 @@
 import json 
-from base import BaseJudge
+from judges.base_judge import BaseJudge
 
 class PrometheusJudge(BaseJudge):
     def __init__(self, client):
         self.client = client
 
     def evaluate(self, prompt):
-        response = self.client.chat.completions.create(
-            model="prometheus-eval/prometheus-8x7b-v2.0",
+        text = self.client.chat(
             messages=[{"role": "user", "content": prompt}],
-            temperature=0
+            temperature=0.2
         )
-        return self._parse(response)
+        return self._parse(text)
 
-    def _parse(self, response):
+    def _parse(self, text):
         try:
-            text = response.choices[0].message.content
             return json.loads(text.split("<json>")[-1])
         except:
-            return {"error": True}
+            return {"error": True, "raw": text}

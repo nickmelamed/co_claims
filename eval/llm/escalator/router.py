@@ -5,15 +5,15 @@ class EscalationRouter:
         self.var_threshold = var_threshold
         self.conflict_threshold = conflict_threshold
 
-    def decide(self, metrics, uncertainty, evidence_count):
+    def decide(self, metrics, variances, evidence_count):
         actions = []
 
         ESS = metrics["ESS"]
         ECS = metrics["ECS"]
 
         # evidence issues
-        if uncertainty["ESS_var"] > self.var_threshold or \
-           uncertainty["ECS_var"] > self.var_threshold:
+        if variances["ESS_var"] > self.var_threshold or \
+           variances["ECS_var"] > self.var_threshold:
             actions.append("more_evidence")
 
         # polarity conflict 
@@ -21,15 +21,15 @@ class EscalationRouter:
             actions.append("debate")
 
         # logical ambiguity 
-        if uncertainty["LCS_var"] > self.var_threshold:
+        if variances["LCS_var"] > self.var_threshold:
             actions.append("debate")
 
         # measurability ambiguity 
-        if uncertainty["CMS_var"] > self.var_threshold:
+        if variances["CMS_var"] > self.var_threshold:
             actions.append("refine_claim")
 
         # language ambiguity 
-        if uncertainty["HLS_var"] > self.var_threshold:
+        if variances["HLS_var"] > self.var_threshold:
             actions.append("rephrase_claim")
 
         # evidence shortage 

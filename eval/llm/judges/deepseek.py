@@ -1,17 +1,16 @@
 import json 
-from base import BaseJudge
+from judges.base_judge import BaseJudge
 
 class DeepSeekJudge(BaseJudge):
     def __init__(self, client):
         self.client = client
 
     def evaluate(self, prompt):
-        response = self.client.chat.completions.create(
-            model="deepseek-r1",
+        text = self.client.chat(
             messages=[{"role": "user", "content": prompt}],
             temperature=0
         )
-        return self._parse(response)
+        return self._parse(text)
 
     def _parse(self, response):
         try:

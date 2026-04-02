@@ -4,6 +4,7 @@ from .cms import CMS_LLM
 from .lcs import LCS_LLM
 from .hls import HLS_LLM
 
+# TODO: determine if need mean variance calculation (not sure we do...)
 
 class MetricExecutor:
     def __init__(self, ensemble):
@@ -29,14 +30,11 @@ class MetricExecutor:
                 "LCS": LCS,
                 "HLS": HLS
             },
-            "uncertainty": {
+            "variances": {
                 "ESS_var": ESS_var,
                 "ECS_var": ECS_var,
                 "CMS_var": CMS_var,
                 "LCS_var": LCS_var,
-                "HLS_var": HLS_var,
-                "mean_variance": (
-                    ESS_var + ECS_var + CMS_var + LCS_var + HLS_var
-                ) / 5
+                "HLS_var": HLS_var
             }
         }

@@ -1,6 +1,7 @@
 class UncertaintyAnalyzer:
-    def analyze(self, metric_outputs):
-        variances = [m["variance"] for m in metric_outputs]
+    def analyze(self, variances):
+
+        variances = list(variances.values())
 
         return {
             "mean_variance": sum(variances) / len(variances),
