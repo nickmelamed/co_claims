@@ -1,114 +1,63 @@
 from judges.prometheus import PrometheusJudge
 from judges.mixtral import MixtralJudge
+from judges.deepseek import DeepSeekJudge
 from judges.ensemble import JudgeEnsemble
+from judges.client import LocalLLMClient
 
-from metrics.deterministic import DeterministicMetrics
-
-from metrics.executor import UnifiedExecutor
+from evaluator.executor import MetricExecutor
 from escalator.router import EscalationRouter
+from uncertainty.analyzer import UncertaintyAnalyzer
+from structuring.claim_reasoner import ClaimReasoner
+from evidence.triage import EvidenceTriage
+from debate.adjudicator import Adjudicator
+from debate.debaters import DebateEngine
+from evaluator.aggregator import Aggregator
+from input.similarity import Similarity
+
 from pipeline import EvaluationPipeline
 
-# TODO: Replace with actual client 
-class DummyClient:
-    def chat(self):
-        pass
+from sentence_transformers import SentenceTransformer
 
-
-def get_client():
-    import os
-    import httpx
-
-    api_key = os.getenv("OPENROUTER_API_KEY") or os.getenv("OPENAI_API_KEY")
-    if not api_key:
-        raise RuntimeError("Set OPENROUTER_API_KEY or OPENAI_API_KEY before running the evaluator.")
-
-    base_url = os.getenv("OPENAI_BASE_URL", "https://openrouter.ai/api/v1").rstrip("/")
-
-    class _ChatCompletionsAPI:
-        def __init__(self, client):
-            self._client = client
-
-        def create(self, **payload):
-            response = self._client.post(
-                "/chat/completions",
-                json=payload,
-            )
-            response.raise_for_status()
-            data = response.json()
-
-            message = type("Message", (), {"content": data["choices"][0]["message"]["content"]})()
-            choice = type("Choice", (), {"message": message})()
-            return type("ChatCompletionResponse", (), {"choices": [choice]})()
-
-    class _ChatAPI:
-        def __init__(self, client):
-            self.completions = _ChatCompletionsAPI(client)
-
-    class _Client:
-        def __init__(self):
-            self._http = httpx.Client(
-                base_url=base_url,
-                headers={
-                    "Authorization": f"Bearer {api_key}",
-                    "Content-Type": "application/json",
-                },
-                timeout=30.0,
-            )
-            self.chat = _ChatAPI(self)
-
-        def post(self, path, **kwargs):
-            return self._http.post(path, **kwargs)
-
-    return _Client()
-
+EMBED_MODEL = SentenceTransformer("all-MiniLM-L6-v2")
 
 # TODO: replace with real retriever 
 class DummyRetriever:
     def retrieve(self, claim, extra=False):
         return [
             {
-                "text": "The model improves accuracy by 5% on benchmark datasets.",
-                "embedding": [0.1, 0.2, 0.3]
+                "text": "The model improves accuracy by 5% on benchmark datasets."
             },
             {
-                "text": "Some studies show no improvement in performance.",
-                "embedding": [0.2, 0.1, 0.4]
+                "text": "Some studies show no improvement in performance."
             }
         ]
 
-
-# TODO: replace with real embedding function 
 def embed_fn(text):
-    return [0.1, 0.2, 0.3]
+    return EMBED_MODEL.encode(text).tolist()
 
 
 def main():
-    client = get_client()
+
+    def get_client(model_name: str):
+        return LocalLLMClient(model_name)
 
     # Judges
-    prometheus = PrometheusJudge(client)
-    mixtral = MixtralJudge(client)
+    prometheus = PrometheusJudge(client=get_client("prometheus-eval/prometheus-7b-v2.0"))
+    mixtral = MixtralJudge(client=get_client("mistralai/Mistral-7B-Instruct-v0.2"))
+    deepseek = DeepSeekJudge(client=get_client("deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B"))
 
-    # Metrics
-    ensemble = JudgeEnsemble(prometheus, mixtral)
-    deterministic = DeterministicMetrics()
+    ensemble = JudgeEnsemble([prometheus, mixtral])
 
     # Components
-    metric_executor = UnifiedExecutor(ensemble)
+    metric_executor = MetricExecutor(ensemble)
     router = EscalationRouter()
+    uncertainty_analyzer = UncertaintyAnalyzer()
 
-    # Minimal placeholders (replace with real ones)
-    reasoner = type("Reasoner", (), {"structure": lambda self, x: {"claim": x}})()
-    triage = type("Triage", (), {
-        "filter": lambda self, emb, ev: ev,
-        "sim": type("Sim", (), {
-            "relevance": lambda self, a, b: 0.9
-        })()
-    })()
-
-    aggregator = type("Agg", (), {
-        "credibility": lambda self, e, c, n: (e + c) / 2
-    })()
+    reasoner = ClaimReasoner(deepseek)
+    triage = EvidenceTriage(Similarity())
+    aggregator = Aggregator()
+    debate_engine = DebateEngine(prometheus, mixtral)
+    adjudicator = Adjudicator(prometheus)
 
     pipeline = EvaluationPipeline(
         retriever=DummyRetriever(),
@@ -116,8 +65,10 @@ def main():
         reasoner=reasoner,
         triage=triage,
         metric_executor=metric_executor,
-        uncertainty_analyzer=None,  # handled inside executor now
+        uncertainty_analyzer=uncertainty_analyzer,
         escalation_router=router,
+        debate_engine=debate_engine,
+        adjudicator=adjudicator,
         aggregator=aggregator
     )
 

@@ -15,8 +15,6 @@ class DeterministicMetrics:
     def coverage(self, claim_entities, evidence_entities):
         union = set().union(*evidence_entities) if evidence_entities else set()
         return len(claim_entities & union) / max(1, len(claim_entities))
-    
-    
 
     def compute(self, claim_f, evidence_entities, domains, n):
         EAS = self.metrics.eas(n)

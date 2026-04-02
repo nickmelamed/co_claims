@@ -8,6 +8,8 @@ class EvaluationPipeline:
         metric_executor,
         uncertainty_analyzer,
         escalation_router,
+        debate_engine,
+        adjudicator,
         aggregator
     ):
         self.retriever = retriever
@@ -17,18 +19,25 @@ class EvaluationPipeline:
         self.metrics = metric_executor
         self.uncertainty = uncertainty_analyzer
         self.router = escalation_router
+        self.debate_engine = debate_engine
+        self.adjudicator = adjudicator
         self.aggregator = aggregator
 
     def run(self, claim):
-        # retrieval 
+        # Retrieval 
         evidence_list = self.retriever.retrieve(claim)
 
-        # structuring (LLM-reasoning)
-        structured = self.reasoner.structure(claim)
-
-        # relevance score
+        # Embedding 
         claim_embedding = self.embed_fn(claim)
 
+        for e in evidence_list:
+            if "embedding" not in e:
+                e["embedding"] = self.embed_fn(e["text"])
+
+        # Claim Structuring
+        structured = self.reasoner.structure(claim)
+
+        # Relevance Scoring 
         relevances = []
         for e in evidence_list:
             r = e.get("relevance")
@@ -38,7 +47,7 @@ class EvaluationPipeline:
                 )
             relevances.append(r)
 
-        # evidence triage 
+        # Evidence Triage
         filtered_evidence = self.triage.filter(
             claim_embedding,
             evidence_list
@@ -49,15 +58,7 @@ class EvaluationPipeline:
             if e in filtered_evidence
         ]
 
-        # all metrics 
-        # TODO: fix this function call 
-        #     results = self.metrics.evaluate(
-        #     claim,
-        #     claim_f,
-        #     filtered_evidence,
-        #     domains
-        # )
-
+        # LLM Metrics
         metric_outputs = self.metrics.evaluate(
             claim,
             filtered_evidence,
@@ -65,24 +66,29 @@ class EvaluationPipeline:
         )
 
         metrics = metric_outputs['metrics']
-        uncertainty = metric_outputs['uncertainty']
+        variances = metric_outputs['variances']
 
-        # uncertainty analysis 
-        uncertainty = self.uncertainty.analyze(metric_outputs)
+        # Uncertainty Analysis
+        uncertainty = self.uncertainty.analyze(variances)
 
-
-        # adaptive escalation decision 
+        # Escalation Decision
         decision_obj = self.router.decide(
             metrics,
-            uncertainty,
+            variances,
             len(filtered_evidence)
         )
 
-        # escalation actions 
+        # Escalation Action 
         if decision_obj["decision"] == "escalate":
 
             if "more_evidence" in decision_obj["actions"]:
                 new_evidence = self.retriever.retrieve(claim, extra=True)
+
+                # embed new evidence
+                for e in new_evidence:
+                    if "embedding" not in e:
+                        e["embedding"] = self.embed_fn(e["text"])
+
                 filtered_evidence.extend(new_evidence)
 
             if "refine_claim" in decision_obj["actions"]:
@@ -95,41 +101,21 @@ class EvaluationPipeline:
                 metrics["ESS"] = adjudicated.get("support_score", metrics["ESS"])
                 metrics["ECS"] = adjudicated.get("contradiction_score", metrics["ECS"])
 
-        # aggregation 
-        def weighted_avg(vals):
-            return sum(vals) / len(vals) if vals else 0
+        # Aggregation 
+        n = len(filtered_evidence)
 
-
-        evidence_metrics = [
-            metrics["ESS"],
-            metrics["ECS"],
-            metrics["EAS"]
-        ]
-
-        source_metrics = [
-            metrics["SRS"],
-            metrics["EVS"]
-        ]
-
-        claim_metrics = [
-            metrics["CMS"],
-            metrics["LCS"],
-            metrics["HLS"]
-        ]
-
-        evidence_score = weighted_avg(evidence_metrics + source_metrics)
-        claim_score = weighted_avg(claim_metrics)
+        evidence_score = (metrics["ESS"] + metrics["ECS"]) / 2
+        claim_score = (metrics["CMS"] + metrics["LCS"] + metrics["HLS"]) / 3
 
         credibility = self.aggregator.credibility(
             evidence_score,
             claim_score,
-            len(filtered_evidence)
+            n
         )
-
 
         return {
             "metrics": metrics,
-            "uncertainty": uncertainty,
+            "variances": variances,
             "decision": decision_obj,
             "credibility": credibility,
             "structured": structured
