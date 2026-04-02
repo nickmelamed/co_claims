@@ -25,3 +25,19 @@ class ClaimReasoner:
         return self.judge.evaluate(
             STRUCTURE_PROMPT.format(claim=claim)
         )
+    
+    def rephrase(self, claim):
+        prompt = """
+        Rewrite this claim to improve clarity.
+
+        Requirements:
+        - Remove vague or hedging language (e.g., "may", "could", "often")
+        - Make it more specific and measurable if possible
+        - Preserve original meaning
+
+        Claim: {claim}
+
+        Return only the rewritten claim.
+        """
+
+        return self.judge.evaluate(prompt.format(claim=claim))
