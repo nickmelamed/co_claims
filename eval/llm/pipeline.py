@@ -69,37 +69,76 @@ class EvaluationPipeline:
         variances = metric_outputs['variances']
 
         # Uncertainty Analysis
-        uncertainty = self.uncertainty.analyze(variances)
+        analysis = self.uncertainty.analyze(variances)
 
         # Escalation Decision
         decision_obj = self.router.decide(
             metrics,
-            variances,
+            analysis,
             len(filtered_evidence)
         )
 
         # Escalation Action 
         if decision_obj["decision"] == "escalate":
 
-            if "more_evidence" in decision_obj["actions"]:
-                new_evidence = self.retriever.retrieve(claim, extra=True)
+            actions = set(decision_obj["actions"])
 
-                # embed new evidence
-                for e in new_evidence:
+            # claim rewrites
+            if "rephrase_claim" in actions:
+                claim = self.reasoner.rephrase(claim)
+
+            if "refine_claim" in actions:
+                claim = self.reasoner.structure(claim).get("refined_claim", claim)
+
+            # global review 
+            if "global_review" in actions:
+                # full reset -> treat as fresh evaluation
+                evidence_list = self.retriever.retrieve(claim, extra=True)
+
+                for e in evidence_list:
                     if "embedding" not in e:
                         e["embedding"] = self.embed_fn(e["text"])
 
-                filtered_evidence.extend(new_evidence)
+                filtered_evidence = evidence_list
 
-            if "refine_claim" in decision_obj["actions"]:
-                claim = self.reasoner.structure(claim).get("refined_claim", claim)
+                # recompute everything downstream
+                metric_outputs = self.metrics.evaluate(
+                                                claim,
+                                                filtered_evidence,
+                                                filtered_relevances
+                                            )
+                metrics, variances = metric_outputs['metrics'], metric_outputs['variances']
 
-            if "debate" in decision_obj["actions"]:
+            else:
+                # more evidence
+                if "more_evidence" in actions:
+                    new_evidence = self.retriever.retrieve(claim, extra=True)
+
+                    for e in new_evidence:
+                        if "embedding" not in e:
+                            e["embedding"] = self.embed_fn(e["text"])
+
+                    filtered_evidence.extend(new_evidence)
+
+                    # recompute metrics after adding evidence
+                    metric_outputs = self.metrics.evaluate(
+                                                claim,
+                                                filtered_evidence,
+                                                filtered_relevances
+                                            )
+                    metrics, variances = metric_outputs['metrics'], metric_outputs['variances']
+
+            # debate 
+            if "debate" in actions:
                 debate_output = self.debate_engine.run(claim, filtered_evidence)
                 adjudicated = self.adjudicator.decide(claim, debate_output)
 
                 metrics["ESS"] = adjudicated.get("support_score", metrics["ESS"])
                 metrics["ECS"] = adjudicated.get("contradiction_score", metrics["ECS"])
+
+                # optionally update variances if debate affects disagreement
+                if "variances" in adjudicated:
+                    variances.update(adjudicated["variances"])
 
         # Aggregation 
         n = len(filtered_evidence)
