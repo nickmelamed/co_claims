@@ -7,14 +7,14 @@ Claim:
 {claim}
 
 Output JSON:
-{
+{{
   "entities": [],
   "metrics": [],
   "direction": "increase/decrease/none",
   "scope": "broad/specific",
   "modality": "strong/hedged",
   "decomposed_claims": []
-}
+}}
 """
 
 class ClaimReasoner:

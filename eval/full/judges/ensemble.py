@@ -1,30 +1,39 @@
 import numpy as np
 
+
 class JudgeEnsemble:
-    def __init__(self, prometheus, mixtral):
-        self.prometheus = prometheus
-        self.mixtral = mixtral
+    def __init__(self, judges):
+        self.judges = judges
 
-    def evaluate(self, claim, evidence_text):
-        p = self.prometheus.evaluate(claim, evidence_text)
-        m = self.mixtral.evaluate(claim, evidence_text)
+    def evaluate(self, prompt, field="score"):
+        """
+        field: which key to aggregate ("score", "entailment", etc.)
+        """
 
-        outputs = [p, m]
+        outputs = [j.evaluate(prompt) for j in self.judges]
 
-        metrics = ["ESS", "ECS", "CMS", "LCS", "HLS"]
+        valid = [o for o in outputs if isinstance(o, dict) and field in o]
 
-        result = {}
-        variance = {}
+        if not valid:
+            return {
+                "mean": 0.0,
+                "variance": 1.0,
+                "raw": outputs
+            }
 
-        for metric in metrics:
-            vals = [o[metric] for o in outputs if metric in o]
+        values = [o[field] for o in valid]
 
-            if not vals:
-                result[metric] = 0
-                variance[metric] = 1
-                continue
+        # use confidence-weighted averaging
+        if "confidence" in valid[0]:
+            weights = [o.get("confidence", 1.0) for o in valid]
+            mean = np.average(values, weights=weights)
+        else:
+            mean = np.mean(values)
 
-            result[metric] = float(np.mean(vals))
-            variance[metric] = float(np.var(vals))
+        variance = np.var(values)
 
-        return result, variance, outputs
+        return {
+            "mean": float(mean),
+            "variance": float(variance),
+            "raw": valid
+        }

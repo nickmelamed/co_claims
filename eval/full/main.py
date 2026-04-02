@@ -2,7 +2,9 @@ from judges.prometheus import PrometheusJudge
 from judges.mixtral import MixtralJudge
 from judges.ensemble import JudgeEnsemble
 
-from metrics.executor import MetricExecutor
+from metrics.deterministic import DeterministicMetrics
+
+from metrics.executor import UnifiedExecutor
 from escalator.router import EscalationRouter
 from pipeline import EvaluationPipeline
 
@@ -13,8 +15,51 @@ class DummyClient:
 
 
 def get_client():
-    # TODO: replace with real client initialization
-    return None
+    import os
+    import httpx
+
+    api_key = os.getenv("OPENROUTER_API_KEY") or os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        raise RuntimeError("Set OPENROUTER_API_KEY or OPENAI_API_KEY before running the evaluator.")
+
+    base_url = os.getenv("OPENAI_BASE_URL", "https://openrouter.ai/api/v1").rstrip("/")
+
+    class _ChatCompletionsAPI:
+        def __init__(self, client):
+            self._client = client
+
+        def create(self, **payload):
+            response = self._client.post(
+                "/chat/completions",
+                json=payload,
+            )
+            response.raise_for_status()
+            data = response.json()
+
+            message = type("Message", (), {"content": data["choices"][0]["message"]["content"]})()
+            choice = type("Choice", (), {"message": message})()
+            return type("ChatCompletionResponse", (), {"choices": [choice]})()
+
+    class _ChatAPI:
+        def __init__(self, client):
+            self.completions = _ChatCompletionsAPI(client)
+
+    class _Client:
+        def __init__(self):
+            self._http = httpx.Client(
+                base_url=base_url,
+                headers={
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json",
+                },
+                timeout=30.0,
+            )
+            self.chat = _ChatAPI(self)
+
+        def post(self, path, **kwargs):
+            return self._http.post(path, **kwargs)
+
+    return _Client()
 
 
 # TODO: replace with real retriever 
@@ -44,10 +89,12 @@ def main():
     prometheus = PrometheusJudge(client)
     mixtral = MixtralJudge(client)
 
+    # Metrics
     ensemble = JudgeEnsemble(prometheus, mixtral)
+    deterministic = DeterministicMetrics()
 
     # Components
-    metric_executor = MetricExecutor(ensemble)
+    metric_executor = UnifiedExecutor(ensemble)
     router = EscalationRouter()
 
     # Minimal placeholders (replace with real ones)

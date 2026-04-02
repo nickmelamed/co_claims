@@ -6,12 +6,11 @@ class DeepSeekJudge(BaseJudge):
         self.client = client
 
     def evaluate(self, prompt):
-        response = self.client.chat.completions.create(
-            model="deepseek-r1",
+        text = self.client.chat(
             messages=[{"role": "user", "content": prompt}],
             temperature=0
         )
-        return self._parse(response)
+        return self._parse(text)
 
     def _parse(self, response):
         try:
