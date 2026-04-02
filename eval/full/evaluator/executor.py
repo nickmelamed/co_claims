@@ -2,43 +2,144 @@ import numpy as np
 
 
 class UnifiedExecutor:
-    def __init__(self, ensemble, deterministic_metrics):
-        self.ensemble = ensemble
+    def __init__(self, llm_judge, deterministic_metrics, aggregator):
+        self.llm_judge = llm_judge
         self.det = deterministic_metrics
+        self.aggregator = aggregator
 
-    def evaluate(self, claim, claim_f, evidence_list, domains):
-        evidence_text = "\n".join([e["text"] for e in evidence_list])
+    def evaluate(self, claim, claim_time, evidence_list, entities):
+        # evidence_text = "\n".join([e["text"] for e in evidence_list])
 
-        # LLM metrics 
-        llm_metrics, variance, raw = self.ensemble.evaluate(
+        llm_metrics, llm_variances, raw = self.llm_judge.evaluate(
             claim,
-            evidence_text
+            evidence_list,
+            [e.get("relevance", 0.5) for e in evidence_list]
         )
 
-        # Deterministic metrics 
-        evidence_entities = [e["entities"] for e in evidence_list]
+        # Claim score + variance
+        claim_score, claim_variance = self.compute_claim_score(
+            llm_metrics,
+            llm_variances,
+            entities
+        )
+
+        # Deterministic metrics (no variance)
+        det_metrics = self.compute_deterministic_metrics(
+            claim_time,
+            evidence_list,
+            entities
+        )
+
+        # Evidence score + variance
+        evidence_score, evidence_variance = self.compute_evidence_score(
+            llm_metrics,
+            llm_variances,
+            det_metrics
+        )
+
+        # Aggregation
         n = len(evidence_list)
 
-        det_metrics = self.det.compute(
-            claim_f,
-            evidence_entities,
-            domains,
+        final_score = self.aggregator.credibility(
+            evidence_score,
+            claim_score,
             n
         )
 
-        # merge metrics
-        all_metrics = {**llm_metrics, **det_metrics}
+        # Outputs
+        all_metrics = {
+            **llm_metrics,
+            **det_metrics,
+            "CScope": self.det.cscope(entities),
+            "claim_score": claim_score,
+            "evidence_score": evidence_score
+        }
 
-        # uncertainty calculation
-        mean_variance = np.mean(list(variance.values()))
-
-        uncertainty = {
-            **{f"{k}_var": v for k, v in variance.items()},
-            "mean_variance": mean_variance
+        all_variances = {
+            **llm_variances,
+            "claim_variance": claim_variance,
+            "evidence_variance": evidence_variance
         }
 
         return {
+            "final_score": final_score,
             "metrics": all_metrics,
-            "uncertainty": uncertainty,
+            "variances": all_variances,
             "raw_judgments": raw
         }
+
+    # claim score
+    def compute_claim_score(self, m, v, entities):
+        cscope = self.det.cscope(entities)
+
+        values = [
+            m.get("CMS", 0),
+            m.get("HLS", 0),
+            m.get("LCS", 0),
+            cscope
+        ]
+
+        variances = [
+            v.get("CMS", 0),
+            v.get("HLS", 0),
+            v.get("LCS", 0),
+            0.0  # deterministic metric
+        ]
+
+        return self._mean(values), self._mean(variances)
+
+    # evidence scores
+    def compute_evidence_score(self, llm_m, llm_v, det_m):
+        values = [
+            llm_m.get("ESS", 0),
+            1 - llm_m.get("ECS", 0),
+            det_m["EAS"],
+            det_m["ERS"],
+            det_m["ESTS"],
+            det_m["EAGS"],
+            det_m["SRS"],
+            det_m["EVS"]
+        ]
+
+        variances = [
+            llm_v.get("ESS", 0),
+            llm_v.get("ECS", 0),
+            0.0,  # deterministic
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+        ]
+
+        return self._mean(values), self._mean(variances)
+
+    # deterministic metrics
+    def compute_deterministic_metrics(self, claim_time, evidence_list, entities):
+        n = len(evidence_list)
+
+        timestamps = [e.get("timestamp", claim_time) for e in evidence_list]
+        domains = [e.get("domain", "unknown") for e in evidence_list]
+        relevances = [e.get("relevance", 0.5) for e in evidence_list]
+        supports = [e.get("support_score", 0.5) for e in evidence_list]
+        source_types = [e.get("source_type", "unknown") for e in evidence_list]
+
+        return {
+            "EAS": self.det.eas(n),
+            "ERS": self.det.ers(claim_time, timestamps),
+            "ESTS": self.det.ests(relevances, source_types),
+            "EAGS": self.det.eags(supports),
+            "SRS": self.det.srs(domains),
+            "EVS": self.det.evs(source_types)
+        }
+    
+
+
+    # utils
+    def _mean(self, values):
+        if not values:
+            return 0.0
+        return sum(values) / len(values)
+
+    def _clip(self, x):
+        return max(0.0, min(1.0, x))

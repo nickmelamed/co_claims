@@ -1,39 +1,48 @@
 import numpy as np
 
-
 class JudgeEnsemble:
     def __init__(self, judges):
         self.judges = judges
 
-    def evaluate(self, prompt, field="score"):
-        """
-        field: which key to aggregate ("score", "entailment", etc.)
-        """
-
+    def evaluate(self, prompt):
         outputs = [j.evaluate(prompt) for j in self.judges]
 
-        valid = [o for o in outputs if isinstance(o, dict) and field in o]
+        # filter valid outputs
+        valid = [o for o in outputs if isinstance(o, dict)]
 
         if not valid:
-            return {
-                "mean": 0.0,
-                "variance": 1.0,
-                "raw": outputs
-            }
+            return {}, {}, outputs
 
-        values = [o[field] for o in valid]
+        metrics = valid[0].keys()
 
-        # use confidence-weighted averaging
-        if "confidence" in valid[0]:
-            weights = [o.get("confidence", 1.0) for o in valid]
+        aggregated_scores = {}
+        aggregated_variances = {}
+
+        for m in metrics:
+            values = []
+            weights = []
+
+            for o in valid:
+                if m in o:
+                    val = o[m]
+
+                    if isinstance(val, dict) and "score" in val:
+                        values.append(val["score"])
+                        weights.append(val.get("confidence", 1.0))
+
+                    elif isinstance(val, (int, float)):
+                        values.append(val)
+                        weights.append(1.0)
+
+            if not values:
+                aggregated_scores[m] = 0.0
+                aggregated_variances[m] = 1.0
+                continue
+
             mean = np.average(values, weights=weights)
-        else:
-            mean = np.mean(values)
+            variance = np.var(values)
 
-        variance = np.var(values)
+            aggregated_scores[m] = float(mean)
+            aggregated_variances[m] = float(variance)
 
-        return {
-            "mean": float(mean),
-            "variance": float(variance),
-            "raw": valid
-        }
+        return aggregated_scores, aggregated_variances, valid

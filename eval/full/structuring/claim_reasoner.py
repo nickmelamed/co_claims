@@ -1,4 +1,6 @@
 # TODO need to edit the output based on desired uses 
+import re
+from datetime import datetime
 
 STRUCTURE_PROMPT = """
 Parse the claim into structured components.
@@ -21,10 +23,22 @@ class ClaimReasoner:
     def __init__(self, judge):
         self.judge = judge
 
+    def extract_time(self, claim):
+        match = re.search(r"(20\d{2})", claim)
+        if match:
+            return datetime(int(match.group(1)), 1, 1)
+
+        return datetime.utcnow()
+
     def structure(self, claim):
-        return self.judge.evaluate(
+        structured = self.judge.evaluate(
             STRUCTURE_PROMPT.format(claim=claim)
         )
+
+        # inject deterministic time
+        structured["claim_time"] = self.extract_time(claim)
+
+        return structured
     
     def rephrase(self, claim):
         prompt = """

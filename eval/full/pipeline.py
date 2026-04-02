@@ -10,7 +10,6 @@ class EvaluationPipeline:
         escalation_router,
         debate_engine,
         adjudicator,
-        aggregator
     ):
         self.retriever = retriever
         self.embed_fn = embed_fn
@@ -21,114 +20,107 @@ class EvaluationPipeline:
         self.router = escalation_router
         self.debate_engine = debate_engine
         self.adjudicator = adjudicator
-        self.aggregator = aggregator
 
-    def run(self, claim):
-        # Retrieval 
-        evidence_list = self.retriever.retrieve(claim)
-
-        # Embedding 
-        claim_embedding = self.embed_fn(claim)
-
+    def _embed_evidence(self, evidence_list):
         for e in evidence_list:
             if "embedding" not in e:
                 e["embedding"] = self.embed_fn(e["text"])
 
-        # Claim Structuring
-        structured = self.reasoner.structure(claim)
-
-        # Relevance Scoring 
-        relevances = []
+    def _attach_relevance(self, claim_embedding, evidence_list):
         for e in evidence_list:
-            r = e.get("relevance")
-            if r is None:
-                r = self.triage.sim.relevance(
+            if "relevance" not in e:
+                e["relevance"] = self.triage.sim.relevance(
                     claim_embedding, e["embedding"]
                 )
-            relevances.append(r)
 
-        # Evidence Triage
+    def _evaluate(self, claim, structured, evidence_list):
+        return self.metrics.evaluate(
+            claim=claim,
+            claim_time=structured.get("claim_time"),
+            evidence_list=evidence_list,
+            entities=structured.get("entities", [])
+        )
+
+    def run(self, claim):
+        # retrieval 
+        evidence_list = self.retriever.retrieve(claim)
+
+        # embedding 
+        claim_embedding = self.embed_fn(claim)
+        self._embed_evidence(evidence_list)
+
+        # claim structuring 
+        structured = self.reasoner.structure(claim)
+
+        # relevance and triage 
+        self._attach_relevance(claim_embedding, evidence_list)
+
         filtered_evidence = self.triage.filter(
             claim_embedding,
             evidence_list
         )
 
-        filtered_relevances = [
-            r for e, r in zip(evidence_list, relevances)
-            if e in filtered_evidence
-        ]
-
-        # LLM Metrics
-        metric_outputs = self.metrics.evaluate(
+        # initial evaluation 
+        metric_outputs = self._evaluate(
             claim,
-            filtered_evidence,
-            filtered_relevances
+            structured,
+            filtered_evidence
         )
 
-        metrics = metric_outputs['metrics']
-        variances = metric_outputs['variances']
+        metrics = metric_outputs["metrics"]
+        variances = metric_outputs["variances"]
 
-        # Uncertainty Analysis
+        # uncertainty analysis 
         analysis = self.uncertainty.analyze(variances)
 
-        # Escalation Decision
+        # escalation decision 
         decision_obj = self.router.decide(
             metrics,
             analysis,
             len(filtered_evidence)
         )
 
-        # Escalation Action 
+        # escalation actions 
         if decision_obj["decision"] == "escalate":
 
             actions = set(decision_obj["actions"])
 
-            # claim rewrites
+            # Claim modifications
             if "rephrase_claim" in actions:
                 claim = self.reasoner.rephrase(claim)
 
             if "refine_claim" in actions:
-                claim = self.reasoner.structure(claim).get("refined_claim", claim)
+                structured = self.reasoner.structure(claim)
+                claim = structured.get("refined_claim", claim)
 
-            # global review 
+            # Global reset
             if "global_review" in actions:
-                # full reset -> treat as fresh evaluation
                 evidence_list = self.retriever.retrieve(claim, extra=True)
-
-                for e in evidence_list:
-                    if "embedding" not in e:
-                        e["embedding"] = self.embed_fn(e["text"])
+                self._embed_evidence(evidence_list)
+                self._attach_relevance(claim_embedding, evidence_list)
 
                 filtered_evidence = evidence_list
 
-                # recompute everything downstream
-                metric_outputs = self.metrics.evaluate(
-                                                claim,
-                                                filtered_evidence,
-                                                filtered_relevances
-                                            )
-                metrics, variances = metric_outputs['metrics'], metric_outputs['variances']
-
             else:
-                # more evidence
                 if "more_evidence" in actions:
                     new_evidence = self.retriever.retrieve(claim, extra=True)
 
-                    for e in new_evidence:
-                        if "embedding" not in e:
-                            e["embedding"] = self.embed_fn(e["text"])
+                    self._embed_evidence(new_evidence)
+                    self._attach_relevance(claim_embedding, new_evidence)
 
                     filtered_evidence.extend(new_evidence)
 
-                    # recompute metrics after adding evidence
-                    metric_outputs = self.metrics.evaluate(
-                                                claim,
-                                                filtered_evidence,
-                                                filtered_relevances
-                                            )
-                    metrics, variances = metric_outputs['metrics'], metric_outputs['variances']
+            # Re-evaluate after changes
+            metric_outputs = self._evaluate(
+                claim,
+                structured,
+                filtered_evidence
+            )
 
-            # debate 
+            metrics = metric_outputs["metrics"]
+            variances = metric_outputs["variances"]
+
+            # Debate (post-metrics override)
             if "debate" in actions:
                 debate_output = self.debate_engine.run(claim, filtered_evidence)
                 adjudicated = self.adjudicator.decide(claim, debate_output)
@@ -136,26 +128,15 @@ class EvaluationPipeline:
                 metrics["ESS"] = adjudicated.get("support_score", metrics["ESS"])
                 metrics["ECS"] = adjudicated.get("contradiction_score", metrics["ECS"])
 
-                # optionally update variances if debate affects disagreement
                 if "variances" in adjudicated:
                     variances.update(adjudicated["variances"])
 
-        # Aggregation 
-        n = len(filtered_evidence)
-
-        evidence_score = (metrics["ESS"] + metrics["ECS"]) / 2
-        claim_score = (metrics["CMS"] + metrics["LCS"] + metrics["HLS"]) / 3
-
-        credibility = self.aggregator.credibility(
-            evidence_score,
-            claim_score,
-            n
-        )
-
+        # final output 
         return {
             "metrics": metrics,
             "variances": variances,
             "decision": decision_obj,
-            "credibility": credibility,
-            "structured": structured
+            "credibility": metric_outputs["final_score"],
+            "structured": structured,
+            "raw_judgments": metric_outputs.get("raw_judgments")
         }
