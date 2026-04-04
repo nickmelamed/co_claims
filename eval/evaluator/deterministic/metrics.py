@@ -41,15 +41,19 @@ class DeterministicMetrics:
     def eas(self, n):
             return 1 - np.exp(-n / K_EVIDENCE)
 
-    def ers(self, claim_time, evidence_times, half_life=365):
+    def ers(self, claim_time, evidence_times, half_life=90):
         if not evidence_times:
             return 0
+    
+        tau = half_life * 84600 # convert days to seconds 
+        
+        scores = []
+        for t in evidence_times:
+             delta = (claim_time - t).total_seconds()
+             delta = max(0, delta)
 
-        lmbda = np.log(2) / half_life
-        scores = [
-            np.exp(-lmbda * max(0, (claim_time - t).days)) #TODO: decide on units
-            for t in evidence_times
-        ]
+             score = np.exp(-delta * np.log(2) / tau)
+             scores.append(score)
         return np.mean(scores)
 
     def ests(self, relevances, source_types):
