@@ -4,6 +4,8 @@ import json
 UNIFIED_PROMPT = """
 You are evaluating the credibility of a claim using provided evidence.
 
+Use ONLY the provided evidence. Do not use external knowledge.
+
 Claim:
 {claim}
 
@@ -12,22 +14,135 @@ Evidence:
 
 Evaluate the following metrics (0 to 1):
 
-1. ESS (Evidence Support Score)
-2. ECS (Evidence Contradiction Score)
-3. CMS (Claim Measurability Score)
-4. LCS (Logical Consistency Score)
-5. HLS (Hedging Level Score)
+Definitions:
+- ESS: Degree to which evidence directly supports the claim.
+  0 = no support
+  1 = strong, direct support
 
-Output:
+- ECS: Degree to which evidence contradicts the claim.
+  0 = no contradiction
+  1 = strong, direct contradiction
+
+- CMS: Degree to which the claim is specific and measurable.
+  0 = vague, not testable
+  1 = precise, quantifiable, testable
+
+- LCS: Logical consistency of the claim.
+  0 = internally contradictory or incoherent
+  1 = fully logically consistent
+
+- HLS: Degree of hedging or uncertainty in the claim.
+  0 = fully certain (no hedging)
+  1 = highly hedged (uncertain, qualified language)
+
+Instructions:
+- Treat each piece of evidence independently before aggregating.
+- Consider both supporting and contradicting evidence.
+- If evidence is insufficient or irrelevant:
+  - ESS should be low
+  - ECS should be low (unless contradiction is explicit)
+  - Confidence should be low
+- Evaluate each metric independently.
+
+Scoring guidelines:
+0.0 = none
+0.25 = weak
+0.5 = moderate
+0.75 = strong
+1.0 = definitive
+
+Confidence reflects:
+- amount of evidence
+- agreement across evidence
+- clarity of support or contradiction
+
+---
+
+Examples:
+
+Example 1:
+Claim: "This model improves accuracy by 20% on ImageNet."
+Evidence: "The model achieved 20% higher accuracy than baseline on ImageNet in experiments."
+
 <json>
-{{
-  "ESS": {{"score": float, "confidence": float}},
-  "ECS": {{"score": float, "confidence": float}},
-  "CMS": {{"score": float, "confidence": float}},
-  "LCS": {{"score": float, "confidence": float}},
-  "HLS": {{"score": float, "confidence": float}}
-}}
+{
+  "ESS": {"score": 0.95, "confidence": 0.9},
+  "ECS": {"score": 0.0, "confidence": 0.9},
+  "CMS": {"score": 1.0, "confidence": 0.95},
+  "LCS": {"score": 1.0, "confidence": 0.95},
+  "HLS": {"score": 0.0, "confidence": 0.9}
+}
 </json>
+
+---
+
+Example 2:
+Claim: "This model significantly improves performance."
+Evidence: "The model showed slight improvements in some cases."
+
+<json>
+{
+  "ESS": {"score": 0.4, "confidence": 0.7},
+  "ECS": {"score": 0.3, "confidence": 0.7},
+  "CMS": {"score": 0.2, "confidence": 0.8},
+  "LCS": {"score": 1.0, "confidence": 0.9},
+  "HLS": {"score": 0.6, "confidence": 0.8}
+}
+</json>
+
+---
+
+Example 3:
+Claim: "The system always returns correct outputs."
+Evidence: "The system fails in 30% of edge cases."
+
+<json>
+{
+  "ESS": {"score": 0.0, "confidence": 0.9},
+  "ECS": {"score": 0.95, "confidence": 0.9},
+  "CMS": {"score": 0.7, "confidence": 0.8},
+  "LCS": {"score": 1.0, "confidence": 0.9},
+  "HLS": {"score": 0.0, "confidence": 0.9}
+}
+</json>
+
+---
+
+Example 4:
+Claim: "This approach may improve results under certain conditions."
+Evidence: "Some experiments show improvement, but results vary."
+
+<json>
+{
+  "ESS": {"score": 0.5, "confidence": 0.6},
+  "ECS": {"score": 0.1, "confidence": 0.6},
+  "CMS": {"score": 0.3, "confidence": 0.7},
+  "LCS": {"score": 1.0, "confidence": 0.9},
+  "HLS": {"score": 0.9, "confidence": 0.9}
+}
+</json>
+
+---
+
+Example 5:
+Claim: "The algorithm increases speed by 50% and decreases speed under heavy load."
+Evidence: "The algorithm increases speed by 50%."
+
+<json>
+{
+  "ESS": {"score": 0.6, "confidence": 0.7},
+  "ECS": {"score": 0.2, "confidence": 0.6},
+  "CMS": {"score": 0.9, "confidence": 0.8},
+  "LCS": {"score": 0.1, "confidence": 0.9},
+  "HLS": {"score": 0.0, "confidence": 0.9}
+}
+</json>
+
+---
+
+Now evaluate:
+
+<json>
 """
 
 
