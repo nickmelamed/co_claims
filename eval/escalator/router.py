@@ -3,9 +3,9 @@
 class EscalationRouter:
     def __init__(
         self,
-        var_threshold=0.05,
-        conflict_threshold=0.2,
-        disagreement_threshold=0.3
+        var_threshold=0.03,
+        conflict_threshold=0.15,
+        disagreement_threshold=0.25
     ):
         self.var_threshold = var_threshold
         self.conflict_threshold = conflict_threshold
