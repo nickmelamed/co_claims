@@ -89,7 +89,7 @@ class RAGIngestor:
         Convert text to vector embedding using Amazon Bedrock.
         Returns a float embedding vector.
         """
-        self.logger.info(f"embedding text '{text}'")
+        #self.logger.info(f"embedding text '{text}'")
         response = self.bedrock.invoke_model(
             modelId=self.embed_model,
             body=json.dumps({
@@ -131,7 +131,7 @@ class RAGIngestor:
 
         try:
             objects = self.s3.list_objects_v2(Bucket=bucket, Prefix=prefix).get("Contents", [])
-            self.logger.info(f"These are objects {objects}")
+            #self.logger.info(f"These are objects {objects}")
             for obj in objects:
                 key = obj["Key"]
 
@@ -169,13 +169,12 @@ class RAGIngestor:
                                 "text": chunk,
                                 "s3_key": key,
                                 "chunk_index": i,
-                                "total_chunks": len(chunks),
                             },
                         )
 
                     stats["files_processed"] += 1
                     stats["total_chunks"] += len(chunks)
-                    self.logger.info(f"Indexed: {key} ({len(chunks)} chunks)")
+                    #self.logger.info(f"Indexed: {key} ({len(chunks)} chunks)")
                 except Exception as e:
                     error_msg = f"Failed to process {key}: {str(e)}"
                     self.logger.error(error_msg)

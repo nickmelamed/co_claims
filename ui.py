@@ -113,7 +113,13 @@ with st.sidebar:
                if "error" in result:
                    st.error(f"Error: {result['error']}")
                else:
-                   st.success(f"✅ Ingested {result.get('files_processed', 0)} files, {result.get('total_chunks', 0)} chunks")
+                   stats = result.get("statistics") or {}
+                   files_n = stats.get("files_processed", 0)
+                   chunks_n = stats.get("total_chunks", 0)
+                   st.success(f"✅ Ingested {files_n} files, {chunks_n} chunks")
+                   errs = stats.get("errors") or []
+                   if errs:
+                       st.warning("Some objects failed:\n" + "\n".join(errs))
   
    st.divider()
   
