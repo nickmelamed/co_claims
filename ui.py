@@ -3,6 +3,7 @@ import requests
 import json
 import os
 from typing import List, Dict
+import pandas as pd # Added to display dummy data
 
 # Configuration
 API_URL = "http://rag-service:8000"
@@ -10,7 +11,7 @@ AUTH_TOKEN = os.getenv("AUTH_TOKEN")
 
 # Page config
 st.set_page_config(
-   page_title="RAG AI Assistant",
+   page_title="CoClaims AI", # Updated title
    page_icon="🤖",
    layout="wide"
 )
@@ -136,8 +137,8 @@ with st.sidebar:
 
 
 # Main chat interface
-st.title("🤖 RAG AI Assistant")
-st.caption("Ask questions about your documents")
+st.title("CoClaims AI") # Updated title
+st.caption("Ask a question about a company claim. Then see the outputted evaluation metrics and follow up with me about the results if needed!") # Updated
 
 # Display chat messages
 for message in st.session_state.messages:
@@ -165,37 +166,128 @@ if prompt := st.chat_input("Ask a question about your documents..."):
    # Get AI response
    with st.chat_message("assistant"):
        with st.spinner("Thinking..."):
-           result = call_chat_api(prompt, top_k=top_k, temperature=temperature)
+           # COMMENTED OUT BLOCK REPLACED TEMPORARILY WITH DUMMY UI DATA (START)
+        #    result = call_chat_api(prompt, top_k=top_k, temperature=temperature)
           
-           if "error" in result:
-               response = f"❌ Error: {result['error']}"
-               st.error(response)
-               st.session_state.messages.append({
-                   "role": "assistant",
-                   "content": response
-               })
-           else:
-               answer = result.get("answer", "No answer generated")
-               sources = result.get("sources", [])
+        #    if "error" in result:
+        #        response = f"❌ Error: {result['error']}"
+        #        st.error(response)
+        #        st.session_state.messages.append({
+        #            "role": "assistant",
+        #            "content": response
+        #        })
+        #    else:
+        #        answer = result.get("answer", "No answer generated")
+        #        sources = result.get("sources", [])
               
-               st.markdown(answer)
+        #        st.markdown(answer)
               
-               # Show sources
-               if sources:
-                   with st.expander("📚 View Sources"):
-                       for i, source in enumerate(sources, 1):
-                           st.markdown(f"""
-                           **Source {i}**: `{source['file']}` 
-                           - Relevance Score: {source['score']:.3f} 
-                           - Chunk: {source['chunk_index']}
-                           """)
+        #        # Show sources
+        #        if sources:
+        #            with st.expander("📚 View Sources"):
+        #                for i, source in enumerate(sources, 1):
+        #                    st.markdown(f"""
+        #                    **Source {i}**: `{source['file']}` 
+        #                    - Relevance Score: {source['score']:.3f} 
+        #                    - Chunk: {source['chunk_index']}
+        #                    """)
               
-               # Add assistant message to chat
-               st.session_state.messages.append({
-                   "role": "assistant",
-                   "content": answer,
-                   "sources": sources
-               })
+        #        # Add assistant message to chat
+        #        st.session_state.messages.append({
+        #            "role": "assistant",
+        #            "content": answer,
+        #            "sources": sources
+        #        })
+        # COMMENTED OUT BLOCK REPLACED TEMPORARILY WITH DUMMY UI DATA (END)
+
+        # START DUMMY UI INPUT 
+
+        # --- DUMMY RESPONSE TEXT ---
+            answer = "This is a placeholder response for demo purposes."
+
+            st.markdown(answer)
+
+            # --- DUMMY METRICS UI ---
+            st.subheader(f"Claim Analysis: {prompt}")
+
+            metrics = {
+                "Evidence Support Score (ESS)": 0.71,
+                "Evidence Contradictory Score (ECS)": 0.42,
+                "Evidence Availability Score (EAS)": 0.83,
+                "Claim Specificity Score (CSS)": 0.64,
+                "Claim Testability Score (CTS)": 0.58,
+                "Evidence Recency Score (ERS)": 0.76,
+                "Source Diversity Score (SDS)": 0.69,
+                "External Verifiability Score (EVS)": 0.72,
+                "Claim Scope Score (CScope)": 0.55,
+                "Claim Measurability Score (CMS)": 0.61,
+                "Hedging Level Score (HLS)": 0.33
+            }
+
+            dashboard, chat = st.columns([3,1])
+
+            with dashboard:
+
+                st.markdown("### Evidence Metrics")
+
+                cols = st.columns(4)
+                i = 0
+                for k, v in metrics.items():
+                    cols[i].metric(k, f"{v:.2f}")
+                    i += 1
+                    if i == 4:
+                        cols = st.columns(4)
+                        i = 0
+
+                st.markdown("### Supporting vs Contradictory Evidence")
+
+                evidence_chart = pd.DataFrame({
+                    "Type": ["Supporting", "Contradictory"],
+                    "Count": [14, 6]
+                }).set_index("Type")
+
+                st.bar_chart(evidence_chart)
+
+                st.markdown("### Evidence Sources")
+
+                evidence_data = pd.DataFrame({
+                    "Source Type": [
+                        "GitHub Repository",
+                        "Financial Filing",
+                        "Tech News Article",
+                        "Company Blog",
+                        "Research Paper",
+                        "Industry Report"
+                    ],
+                    "Sentiment": [
+                        "Support",
+                        "Contradict",
+                        "Neutral",
+                        "Support",
+                        "Support",
+                        "Contradict"
+                    ],
+                    "Evidence Strength": [3,2,1,2,3,2],
+                    "Date": [
+                        "2025-11-02",
+                        "2025-10-14",
+                        "2025-09-08",
+                        "2025-08-22",
+                        "2025-07-10",
+                        "2025-05-02"
+                ]
+            })
+
+            st.dataframe(evidence_data, use_container_width=True)
+
+        # --- STORE IN SESSION (so chat history still works) ---
+            st.session_state.messages.append({
+                "role": "assistant",
+                "content": answer,
+                "sources": []
+            })
+
+# END DUMMY UI INPUT
 
 # Footer
 st.divider()
