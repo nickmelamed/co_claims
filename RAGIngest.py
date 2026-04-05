@@ -78,7 +78,7 @@ class RAGIngestor:
         Simple chunking: split text into fixed-size chunks.
         Returns list of text chunks.
         """
-        self.logger.info(f"chunking text '{text}'")
+        #self.logger.info(f"chunking text '{text}'")
         chunks = []
         for i in range(0, len(text), self.chunk_size):
             chunks.append(text[i:i + self.chunk_size])
@@ -141,22 +141,25 @@ class RAGIngestor:
 
                 try:
                     obj_data= self.s3.get_object(Bucket=bucket, Key=key)["Body"].read()
+                    body = ""
                     if key.endswith(".parquet"):
-                        # df = pd.read_parquet(io.BytesIO(obj_data))
+                        df = pd.read_parquet(io.BytesIO(obj_data))
 
-                        # body = "\n".join(
-                        #     df.apply(
-                        #         lambda row: " | ".join(
-                        #             f"{col}: {'' if pd.isna(row[col]) else str(row[col])}"
-                        #             for col in df.columns
-                        #         ),
-                        #         axis=1
-                        #     ).tolist()
-                        # )
+                        body = "\n".join(
+                            df.apply(
+                                lambda row: " | ".join(
+                                    f"{col}: {'' if pd.isna(row[col]) else str(row[col])}"
+                                    for col in df.columns
+                                ),
+                                axis=1
+                            ).tolist()
+                        )
                         x= 0
                     else:
                         self.logger.info(f"Decoding object data for {key}")
                         body = obj_data.decode("utf-8")
+                    if not body:  # ✅ guard against empty body
+                        self.logger.info(f"Empty body for {key}, skipping.")
 
                     chunks = self.chunk_text(body)
 

@@ -68,7 +68,7 @@ class RAGSearcher:
         )
         matches = []
         points = results.points
-        self.logger.info(f"These are points {points}")
+       # self.logger.info(f"These are points {points}")
 
         for point in points:
             payload = point.payload or {}
