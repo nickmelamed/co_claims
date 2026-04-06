@@ -1,3 +1,5 @@
+import asyncio
+
 DEBATE_PROMPT_A = """
 You are arguing that the claim is TRUE.
 
@@ -8,11 +10,6 @@ Claim:
 
 Evidence:
 {evidence}
-
-Task:
-- Construct the strongest possible argument supporting the claim
-- Use clear reasoning grounded in the evidence
-- If evidence is weak or incomplete, acknowledge limitations
 
 Output ONLY valid JSON:
 
@@ -34,11 +31,6 @@ Claim:
 Evidence:
 {evidence}
 
-Task:
-- Construct the strongest possible argument against the claim
-- Identify logical flaws, missing support, or contradictory evidence
-- If evidence is weak or incomplete, explain why
-
 Output ONLY valid JSON:
 
 <json>
@@ -51,10 +43,38 @@ Output ONLY valid JSON:
 
 class DebateEngine:
     def __init__(self, pro_model, con_model):
-        self.pro_model = pro_model      # Prometheus
-        self.con_model = con_model      # Mixtral
+        self.pro_model = pro_model
+        self.con_model = con_model
+
+    async def _run_pro(self, claim, evidence_text):
+        return await asyncio.to_thread(
+            self.pro_model.evaluate,
+            DEBATE_PROMPT_A.format(claim=claim, evidence=evidence_text)
+        )
+
+    async def _run_con(self, claim, evidence_text):
+        return await asyncio.to_thread(
+            self.con_model.evaluate,
+            DEBATE_PROMPT_B.format(claim=claim, evidence=evidence_text)
+        )
+
+    async def run_async(self, claim, evidence_list):
+        evidence_text = "\n".join([e["text"] for e in evidence_list])
+
+        pro_task = self._run_pro(claim, evidence_text)
+        con_task = self._run_con(claim, evidence_text)
+
+        pro, con = await asyncio.gather(pro_task, con_task)
+
+        return {
+            "pro": pro.get("argument", ""),
+            "con": con.get("argument", "")
+        }
 
     def run(self, claim, evidence_list):
+        """
+        Backward-compatible sync version
+        """
         evidence_text = "\n".join([e["text"] for e in evidence_list])
 
         pro = self.pro_model.evaluate(

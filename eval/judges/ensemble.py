@@ -1,13 +1,31 @@
 import numpy as np
+import asyncio
 
 class JudgeEnsemble:
     def __init__(self, judges):
         self.judges = judges
 
-    def evaluate(self, prompt):
-        outputs = [j.evaluate(prompt) for j in self.judges]
+    async def _eval_one(self, judge, prompt):
+        return await asyncio.to_thread(judge.evaluate, prompt)
 
-        # filter valid outputs
+    async def evaluate_async(self, prompt):
+        tasks = [
+            self._eval_one(j, prompt)
+            for j in self.judges
+        ]
+
+        outputs = await asyncio.gather(*tasks)
+
+        return self._aggregate(outputs)
+
+    def evaluate(self, prompt):
+        """
+        Backward-compatible sync version
+        """
+        outputs = [j.evaluate(prompt) for j in self.judges]
+        return self._aggregate(outputs)
+
+    def _aggregate(self, outputs):
         valid = [o for o in outputs if isinstance(o, dict)]
 
         if not valid:

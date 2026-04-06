@@ -7,10 +7,10 @@ class UnifiedExecutor:
         self.det = deterministic_metrics
         self.aggregator = aggregator
 
-    def evaluate(self, claim, claim_time, evidence_list, entities):
+    async def evaluate(self, claim, claim_time, evidence_list, entities):
         # evidence_text = "\n".join([e["text"] for e in evidence_list])
 
-        llm_metrics, llm_variances, raw = self.llm_judge.evaluate(
+        llm_metrics, llm_variances, raw = await self.llm_judge.evaluate(
             claim,
             evidence_list,
             [e.get("relevance", 0.5) for e in evidence_list]

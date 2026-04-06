@@ -1,5 +1,6 @@
 import os
 import boto3
+import asyncio
 from typing import Optional
 from fastapi import FastAPI, HTTPException, Header, Depends
 from pydantic import BaseModel
@@ -72,7 +73,7 @@ def ingest(request: IngestRequest, authorized: bool = Depends(verify_auth)):
 
 
 @app.post("/chat", response_model=ChatResponse)
-def chat(request: ChatRequest, authorized: bool = Depends(verify_auth)):
+async def chat(request: ChatRequest, authorized: bool = Depends(verify_auth)):
     try:
         # retrieval 
         matches = searcher.search_vectors(request.query, limit=request.top_k)
@@ -89,7 +90,7 @@ def chat(request: ChatRequest, authorized: bool = Depends(verify_auth)):
             })
 
         # eval pipeline 
-        result = pipeline.run(request.query, evidence_list)
+        result = await pipeline.run(request.query, evidence_list)
 
         metrics = result["metrics"]
         credibility = result["credibility"]
@@ -129,10 +130,11 @@ Write a concise 2-3 sentence summary explaining:
 - Any uncertainty
 """
 
-        overview = llm.chat(
-         overview_prompt,
-         temperature=0.3,
-         max_tokens=150
+        overview = await asyncio.to_thread(
+        llm.chat,
+        overview_prompt,
+        0.3,
+        150
       )
 
         # structured output 

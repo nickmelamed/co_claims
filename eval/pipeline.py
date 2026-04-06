@@ -1,3 +1,5 @@
+import asyncio
+
 class EvaluationPipeline:
     def __init__(
         self,
@@ -33,29 +35,31 @@ class EvaluationPipeline:
                     claim_embedding, e["embedding"]
                 )
 
-    def _evaluate(self, claim, structured, evidence_list, entities):
-        return self.metrics.evaluate(
+    async def _evaluate(self, claim, structured, evidence_list, entities):
+        return await self.metrics.evaluate(
             claim=claim,
             claim_time=structured.get("claim_time"),
             evidence_list=evidence_list,
             entities=entities,
         )
 
-    def run(self, claim, evidence_list):
+    async def run(self, claim, evidence_list):
 
-        # embedding 
-        claim_embedding = self.embed_fn(claim)
-        self._embed_evidence(evidence_list)
+        # run embedding and resolved in parallel 
 
-        # claim structuring w/ entity resolution 
+        claim_embedding_task = asyncio.to_thread(self.embed_fn, claim)
+        resolved_task = asyncio.to_thread(self.entity_resolver.resolve, claim, evidence_list)
 
-        resolved = self.entity_resolver(
-            claim,
-            evidence_list
+        claim_embedding, resolved = await asyncio.gather(
+            claim_embedding_task,
+            resolved_task
         )
 
         entities = resolved['entities']
         structured = resolved['structured']
+
+        # embedding 
+        self._embed_evidence(evidence_list)
 
         # relevance and triage 
         self._attach_relevance(claim_embedding, evidence_list)
@@ -66,7 +70,7 @@ class EvaluationPipeline:
         )
 
         # initial evaluation 
-        metric_outputs = self._evaluate(
+        metric_outputs = await self._evaluate(
             claim,
             structured,
             filtered_evidence,
@@ -92,11 +96,17 @@ class EvaluationPipeline:
             actions = set(decision_obj["actions"])
 
             # Claim modifications
-            if "rephrase_claim" in actions and self.entity_resolve.reasoner:
-                claim = self.entity_resolver.reasoner.rephrase(claim)
+            if "rephrase_claim" in actions and self.entity_resolver.reasoner:
+                claim = await asyncio.to_thread(
+                    self.entity_resolver.reasoner.rephrase,
+                    claim
+                )
 
             if "refine_claim" in actions and self.entity_resolver.reasoner:
-                structured = self.entity_resolver.reasoner.structure(claim)
+                structured = await asyncio.to_thread(
+                    self.entity_resolver.reasoner.structure,
+                    claim
+                )
                 claim = structured.get("refined_claim", claim)
 
             # Global reset
@@ -121,11 +131,15 @@ class EvaluationPipeline:
 
             # Re-evaluate after changes
 
-            resolved = self.entity_resolver.resolve(claim, filtered_evidence)
-            entities = resolved['metrics']
+            resolved = await asyncio.to_thread(
+                self.entity_resolver.resolve,
+                claim,
+                filtered_evidence
+            )
+            entities = resolved['entities']
             structured = resolved['structured']
 
-            metric_outputs = self._evaluate(
+            metric_outputs = await self._evaluate(
                 claim,
                 structured,
                 filtered_evidence,
@@ -137,8 +151,12 @@ class EvaluationPipeline:
 
             # Debate (post-metrics override)
             if "debate" in actions:
-                debate_output = self.debate_engine.run(claim, filtered_evidence)
-                adjudicated = self.adjudicator.decide(claim, debate_output)
+                debate_output = await self.debate_engine.run_async(claim, filtered_evidence)
+                adjudicated = await asyncio.to_thread(
+                    self.adjudicator.decide,
+                    claim,
+                    debate_output
+                )
 
                 metrics["ESS"] = adjudicated.get("support_score", metrics["ESS"])
                 metrics["ECS"] = adjudicated.get("contradiction_score", metrics["ECS"])
