@@ -28,8 +28,8 @@ EMBED_MODEL = SentenceTransformer("all-MiniLM-L6-v2")
 def embed_fn(text):
     return EMBED_MODEL.encode(text).tolist()
 
-def get_client(model_name: str):
-    return BedrockClient(model_name)
+def get_client(model_id):
+    return BedrockClient(model_id)
 
 def build_pipeline():
 
