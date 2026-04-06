@@ -100,21 +100,24 @@ class EvaluationPipeline:
                 claim = structured.get("refined_claim", claim)
 
             # Global reset
+            # TODO: implement proper logic given new RAG 
             if "global_review" in actions:
-                evidence_list = self.retriever.retrieve(claim, extra=True)
-                self._embed_evidence(evidence_list)
-                self._attach_relevance(claim_embedding, evidence_list)
+                # evidence_list = self.retriever.retrieve(claim, extra=True)
+                # self._embed_evidence(evidence_list)
+                # self._attach_relevance(claim_embedding, evidence_list)
 
-                filtered_evidence = evidence_list
+                # filtered_evidence = evidence_list
+                pass
 
             else:
-                if "more_evidence" in actions:
-                    new_evidence = self.retriever.retrieve(claim, extra=True)
+                # if "more_evidence" in actions:
+                #     new_evidence = self.retriever.retrieve(claim, extra=True)
 
-                    self._embed_evidence(new_evidence)
-                    self._attach_relevance(claim_embedding, new_evidence)
+                #     self._embed_evidence(new_evidence)
+                #     self._attach_relevance(claim_embedding, new_evidence)
 
-                    filtered_evidence.extend(new_evidence)
+                #     filtered_evidence.extend(new_evidence)
+                pass
 
             # Re-evaluate after changes
 
