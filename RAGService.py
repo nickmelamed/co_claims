@@ -1,6 +1,7 @@
 import os
 import boto3
 import asyncio
+import traceback
 from typing import Optional
 from fastapi import FastAPI, HTTPException, Header, Depends
 from pydantic import BaseModel
@@ -77,23 +78,69 @@ async def chat(request: ChatRequest, authorized: bool = Depends(verify_auth)):
     try:
         # retrieval 
         matches = searcher.search_vectors(request.query, limit=request.top_k)
+
+        if not matches:
+            matches = []
+
+        matches = [
+            m for m in (matches or [])
+            if isinstance(m, dict)
+        ]
+
+        logger.info(f"MATCHES RAW: {matches}")
+
         context = searcher.format_context(matches)
 
         # evidence list construction 
         evidence_list = []
-        for m in matches:
+        for m in matches or []:
+            if not isinstance(m, dict):
+                continue
+
             evidence_list.append({
                 "text": m.get("text", ""),  # MUST exist in your vector store
                 "timestamp": m.get("timestamp"),
                 "source_type": m.get("source_type", "unknown"),
-                "score": m.get("score")
+                "score": m.get("score", 0.0)
             })
+
+        if not evidence_list:
+            return {
+                "metrics": {},
+                "variances": {},
+                "credibility": 0.0,
+                "decision": {"decision": "no_evidence"},
+                "structured": {},
+                "entities": []
+            }
+        
+        if any(m is None for m in matches):
+            logger.warning(f"Found None in matches: {matches}")
 
         # eval pipeline 
         result = await pipeline.run(request.query, evidence_list)
 
-        metrics = result["metrics"]
-        credibility = result["credibility"]
+        logger.info(f"PIPELINE OUTPUT TYPE: {type(result)}")
+        logger.info(f"PIPELINE OUTPUT: {result}")
+
+        # result guardrails 
+        if result is None:
+            raise ValueError("Pipeline returned None")
+        
+        if not isinstance(result, dict):
+            logger.error(f"BAD RESULT TYPE: {type(result)} | VALUE: {result}")
+            raise ValueError("Pipeline returned invalid result")
+
+        if result.get("metrics") is None:
+            logger.error(f"RESULT MISSING METRICS: {result}")
+            result["metrics"] = {}
+
+        if result.get("credibility") is None:
+            logger.error(f"RESULT MISSING CREDIBILITY: {result}")
+            result["credibility"] = 0.0
+
+        metrics = result.get("metrics", {}) or {}
+        credibility = result.get("credibility", {}) or {} 
 
         # evidence counts
         n = len(evidence_list)
@@ -108,7 +155,8 @@ async def chat(request: ChatRequest, authorized: bool = Depends(verify_auth)):
                 "chunk_index": m.get("chunk_index"),
                 "timestamp": m.get("timestamp")
             }
-            for m in matches
+            for m in (matches or [])
+            if isinstance(m, dict)
         ]
 
         # LLM overview 
@@ -151,7 +199,7 @@ Write a concise 2-3 sentence summary explaining:
         )
 
     except Exception as e:
-        logger.error(f"Error in /chat: {str(e)}")
+        logger.error("FULL TRACEBACK:\n" + traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
 
 

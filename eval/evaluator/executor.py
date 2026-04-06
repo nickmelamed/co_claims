@@ -16,6 +16,16 @@ class UnifiedExecutor:
             [e.get("relevance", 0.5) for e in evidence_list]
         )
 
+        if llm_metrics is None:
+            llm_metrics = {}
+        
+        if llm_variances is None:
+            llm_variances = {}
+
+        # Debugging print statements 
+        print("LLM METRICS:", llm_metrics)
+        print("LLM VARIANCES:", llm_variances)
+
         # Claim score + variance
         claim_score, claim_variance = self.compute_claim_score(
             llm_metrics,

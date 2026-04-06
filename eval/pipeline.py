@@ -65,6 +65,9 @@ class EvaluationPipeline:
             resolved_task
         )
 
+        if resolved is None:
+            resolved = {"entities": [], "structured": {}}
+
         entities = resolved['entities']
         structured = resolved['structured']
 
@@ -167,6 +170,9 @@ class EvaluationPipeline:
                     claim,
                     debate_output
                 )
+
+                if adjudicated is None:
+                    adjudicated = {}
 
                 metrics["ESS"] = adjudicated.get("support_score", metrics["ESS"])
                 metrics["ECS"] = adjudicated.get("contradiction_score", metrics["ECS"])

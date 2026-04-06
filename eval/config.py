@@ -27,16 +27,22 @@ from sentence_transformers import SentenceTransformer
 
 EMBED_MODEL = SentenceTransformer("all-MiniLM-L6-v2")
 
+_EMBED_MODEL = None
+
+def get_embed_model():
+    global _EMBED_MODEL
+    if _EMBED_MODEL is None:
+        _EMBED_MODEL = SentenceTransformer("all-MiniLM-L6-v2")
+    return _EMBED_MODEL
+
 
 def embed_fn(text):
-    return EMBED_MODEL.encode(text).tolist()
+    return get_embed_model().encode(text).tolist()
 
 def embed_batch(texts):
-    return EMBED_MODEL.encode(
-        texts,
-        batch_size=32,
-        show_progress_bar=False
-    ).tolist()
+    return get_embed_model().encode(texts, 
+                                    batch_size=32,
+                                    show_progress_bar=False).tolist()
 
 def get_client(model_id):
     return BedrockClient(model_id)
