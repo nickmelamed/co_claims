@@ -1,5 +1,15 @@
 ADJUDICATION_PROMPT = """
-You are a neutral judge evaluating two arguments.
+You are a strict, neutral judge evaluating two arguments about a claim.
+
+Your task is to compare the arguments and determine:
+1. How strongly the FOR argument supports the claim
+2. How strongly the AGAINST argument contradicts the claim
+3. How confident you are in your evaluation
+
+You MUST base your judgment ONLY on the content of the arguments provided.
+Do NOT use external knowledge.
+
+---
 
 Claim:
 {claim}
@@ -10,11 +20,38 @@ Argument FOR:
 Argument AGAINST:
 {con}
 
-Decide:
+---
 
-- support_score (0–1)
-- contradiction_score (0–1)
-- confidence (0–1)
+SCORING RUBRIC:
+
+support_score (0–1):
+- 1.0 = strong, direct, well-reasoned support with clear justification
+- 0.5 = partial or weak support, missing justification or clarity
+- 0.0 = no meaningful support
+
+contradiction_score (0–1):
+- 1.0 = strong, direct contradiction with clear reasoning
+- 0.5 = partial or weak contradiction
+- 0.0 = no meaningful contradiction
+
+confidence (0–1):
+- Reflects how reliable your judgment is based on:
+  - clarity of arguments
+  - completeness of reasoning
+  - absence of ambiguity or conflict
+- 1.0 = very clear and decisive
+- 0.5 = moderate uncertainty
+- 0.0 = highly uncertain or insufficient information
+
+---
+
+IMPORTANT RULES:
+- Compare BOTH arguments before scoring
+- Do NOT assume the claim is true or false by default
+- Do NOT introduce outside facts
+- Output ONLY valid JSON (no extra text)
+
+---
 
 Output:
 <json>

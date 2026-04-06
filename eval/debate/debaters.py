@@ -1,34 +1,50 @@
 DEBATE_PROMPT_A = """
 You are arguing that the claim is TRUE.
 
+Use ONLY the provided evidence. Do NOT use external knowledge.
+
 Claim:
 {claim}
 
 Evidence:
 {evidence}
 
-Provide a concise argument supporting the claim.
+Task:
+- Construct the strongest possible argument supporting the claim
+- Use clear reasoning grounded in the evidence
+- If evidence is weak or incomplete, acknowledge limitations
 
-Output:
+Output ONLY valid JSON:
+
 <json>
-{{"argument": "..."}}
+{{
+  "argument": "..."
+}}
 </json>
 """
 
 DEBATE_PROMPT_B = """
 You are arguing that the claim is FALSE.
 
+Use ONLY the provided evidence. Do NOT use external knowledge.
+
 Claim:
 {claim}
 
 Evidence:
 {evidence}
 
-Critique the claim and identify flaws.
+Task:
+- Construct the strongest possible argument against the claim
+- Identify logical flaws, missing support, or contradictory evidence
+- If evidence is weak or incomplete, explain why
 
-Output:
+Output ONLY valid JSON:
+
 <json>
-{{"argument": "..."}}
+{{
+  "argument": "..."
+}}
 </json>
 """
 
