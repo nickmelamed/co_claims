@@ -17,9 +17,9 @@ Task:
 Output ONLY valid JSON:
 
 <json>
-{
+{{
   "argument": "..."
-}
+}}
 </json>
 """
 
@@ -42,9 +42,9 @@ Task:
 Output ONLY valid JSON:
 
 <json>
-{
+{{
   "argument": "..."
-}
+}}
 </json>
 """
 

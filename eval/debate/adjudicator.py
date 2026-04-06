@@ -55,11 +55,11 @@ IMPORTANT RULES:
 
 Output:
 <json>
-{
+{{
   "support_score": float,
   "contradiction_score": float,
   "confidence": float
-}
+}}
 </json>
 """
 

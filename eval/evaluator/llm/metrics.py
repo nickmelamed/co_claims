@@ -65,13 +65,13 @@ Claim: "This model improves accuracy by 20% on ImageNet."
 Evidence: "The model achieved 20% higher accuracy than baseline on ImageNet in experiments."
 
 <json>
-{
-  "ESS": {"score": 0.95, "confidence": 0.9},
-  "ECS": {"score": 0.0, "confidence": 0.9},
-  "CMS": {"score": 1.0, "confidence": 0.95},
-  "LCS": {"score": 1.0, "confidence": 0.95},
-  "HLS": {"score": 0.0, "confidence": 0.9}
-}
+{{
+  "ESS": {{"score": 0.95, "confidence": 0.9}},
+  "ECS": {{"score": 0.0, "confidence": 0.9}},
+  "CMS": {{"score": 1.0, "confidence": 0.95}},
+  "LCS": {{"score": 1.0, "confidence": 0.95}},
+  "HLS": {{"score": 0.0, "confidence": 0.9}}
+}}
 </json>
 
 ---
@@ -81,13 +81,13 @@ Claim: "This model significantly improves performance."
 Evidence: "The model showed slight improvements in some cases."
 
 <json>
-{
-  "ESS": {"score": 0.4, "confidence": 0.7},
-  "ECS": {"score": 0.3, "confidence": 0.7},
-  "CMS": {"score": 0.2, "confidence": 0.8},
-  "LCS": {"score": 1.0, "confidence": 0.9},
-  "HLS": {"score": 0.6, "confidence": 0.8}
-}
+{{
+  "ESS": {{"score": 0.4, "confidence": 0.7}},
+  "ECS": {{"score": 0.3, "confidence": 0.7}},
+  "CMS": {{"score": 0.2, "confidence": 0.8}},
+  "LCS": {{"score": 1.0, "confidence": 0.9}},
+  "HLS": {{"score": 0.6, "confidence": 0.8}}
+}}
 </json>
 
 ---
@@ -97,13 +97,13 @@ Claim: "The system always returns correct outputs."
 Evidence: "The system fails in 30% of edge cases."
 
 <json>
-{
-  "ESS": {"score": 0.0, "confidence": 0.9},
-  "ECS": {"score": 0.95, "confidence": 0.9},
-  "CMS": {"score": 0.7, "confidence": 0.8},
-  "LCS": {"score": 1.0, "confidence": 0.9},
-  "HLS": {"score": 0.0, "confidence": 0.9}
-}
+{{
+  "ESS": {{"score": 0.0, "confidence": 0.9}},
+  "ECS": {{"score": 0.95, "confidence": 0.9}},
+  "CMS": {{"score": 0.7, "confidence": 0.8}},
+  "LCS": {{"score": 1.0, "confidence": 0.9}},
+  "HLS": {{"score": 0.0, "confidence": 0.9}}
+}}
 </json>
 
 ---
@@ -113,13 +113,13 @@ Claim: "This approach may improve results under certain conditions."
 Evidence: "Some experiments show improvement, but results vary."
 
 <json>
-{
-  "ESS": {"score": 0.5, "confidence": 0.6},
-  "ECS": {"score": 0.1, "confidence": 0.6},
-  "CMS": {"score": 0.3, "confidence": 0.7},
-  "LCS": {"score": 1.0, "confidence": 0.9},
-  "HLS": {"score": 0.9, "confidence": 0.9}
-}
+{{
+  "ESS": {{"score": 0.5, "confidence": 0.6}},
+  "ECS": {{"score": 0.1, "confidence": 0.6}},
+  "CMS": {{"score": 0.3, "confidence": 0.7}},
+  "LCS": {{"score": 1.0, "confidence": 0.9}},
+  "HLS": {{"score": 0.9, "confidence": 0.9}}
+}}
 </json>
 
 ---
@@ -129,13 +129,13 @@ Claim: "The algorithm increases speed by 50% and decreases speed under heavy loa
 Evidence: "The algorithm increases speed by 50%."
 
 <json>
-{
-  "ESS": {"score": 0.6, "confidence": 0.7},
-  "ECS": {"score": 0.2, "confidence": 0.6},
-  "CMS": {"score": 0.9, "confidence": 0.8},
-  "LCS": {"score": 0.1, "confidence": 0.9},
-  "HLS": {"score": 0.0, "confidence": 0.9}
-}
+{{
+  "ESS": {{"score": 0.6, "confidence": 0.7}},
+  "ECS": {{"score": 0.2, "confidence": 0.6}},
+  "CMS": {{"score": 0.9, "confidence": 0.8}},
+  "LCS": {{"score": 0.1, "confidence": 0.9}},
+  "HLS": {{"score": 0.0, "confidence": 0.9}}
+}}
 </json>
 
 ---
