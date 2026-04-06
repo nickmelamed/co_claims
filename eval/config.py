@@ -31,6 +31,13 @@ EMBED_MODEL = SentenceTransformer("all-MiniLM-L6-v2")
 def embed_fn(text):
     return EMBED_MODEL.encode(text).tolist()
 
+def embed_batch(texts):
+    return EMBED_MODEL.encode(
+        texts,
+        batch_size=32,
+        show_progress_bar=False
+    ).tolist()
+
 def get_client(model_id):
     return BedrockClient(model_id)
 
@@ -77,6 +84,7 @@ def build_pipeline():
 
     return EvaluationPipeline(
         embed_fn=embed_fn,
+        embed_batch_fn=embed_batch,
         entity_resolver=entity_resolver,
         reasoner=reasoner,
         triage=triage,

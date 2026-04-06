@@ -4,6 +4,7 @@ class EvaluationPipeline:
     def __init__(
         self,
         embed_fn,
+        embed_batch_fn,
         entity_resolver,
         reasoner,
         triage,
@@ -14,6 +15,7 @@ class EvaluationPipeline:
         adjudicator,
     ):
         self.embed_fn = embed_fn
+        self.embed_batch_fn = embed_batch_fn
         self.entity_resolver = entity_resolver
         self.reasoner = reasoner
         self.triage = triage
@@ -24,9 +26,17 @@ class EvaluationPipeline:
         self.adjudicator = adjudicator
 
     def _embed_evidence(self, evidence_list):
-        for e in evidence_list:
-            if "embedding" not in e:
-                e["embedding"] = self.embed_fn(e["text"])
+        missing = [e for e in evidence_list if "embedding" not in e]
+
+        if not missing:
+            return
+
+        texts = [e["text"] for e in missing]
+
+        embeddings = self.embed_batch_fn(texts)
+
+        for e, emb in zip(missing, embeddings):
+            e["embedding"] = emb
 
     def _attach_relevance(self, claim_embedding, evidence_list):
         for e in evidence_list:
