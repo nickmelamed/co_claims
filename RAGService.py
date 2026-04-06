@@ -7,6 +7,8 @@ from RAGIngest import RAGIngestor
 from RAGSearch import RAGSearcher
 from logger_utils import get_logger
 
+from eval.config import build_pipeline
+
 # Configuration
 AWS_REGION = os.getenv("AWS_REGION", "us-east-1")
 LLM_MODEL = os.getenv("LLM_MODEL", "us.amazon.nova-2-lite-v1:0")
@@ -16,6 +18,11 @@ AUTH_TOKEN = os.getenv("AUTH_TOKEN")
 app = FastAPI(title="RAG AI Search Service", version="1.0.0")
 bedrock = boto3.client("bedrock-runtime", region_name=AWS_REGION)
 logger = get_logger("RAGService")
+
+
+#Pipeline 
+
+pipeline = build_pipeline()
 
 # Initialize RAG components (using default index name "knowledge")
 ingestor = RAGIngestor(aws_region=AWS_REGION)
@@ -42,10 +49,12 @@ class ChatRequest(BaseModel):
 
 
 class ChatResponse(BaseModel):
-   query: str
-   answer: str
-   sources: list
-   context_used: str
+    query: str
+    overview: str
+    metrics: dict
+    credibility: float
+    evidence_counts: dict
+    sources: list
 
 
 @app.post("/ingest")
@@ -63,31 +72,89 @@ def ingest(request: IngestRequest, authorized: bool = Depends(verify_auth)):
 
 @app.post("/chat", response_model=ChatResponse)
 def chat(request: ChatRequest, authorized: bool = Depends(verify_auth)):
-   """Answer questions using RAG."""
-   try:
-       # Search for relevant context
-       matches = searcher.search_vectors(request.query, limit=request.top_k)
-       context = searcher.format_context(matches)
-      
-       # Create prompt
-       system_prompt = "You are a helpful AI assistant. Answer based on the provided context."
-       user_prompt = f"Context:\n{context}\n\nQuestion: {request.query}\n\nAnswer:"
-      
-       # Call Bedrock
-       response = bedrock.converse(
-           modelId=LLM_MODEL,
-           messages=[{"role": "user", "content": [{"text": user_prompt}]}],
-           inferenceConfig={"maxTokens": request.max_tokens, "temperature": request.temperature},
-           system=[{"text": system_prompt}]
-       )
-      
-       answer = response['output']['message']['content'][0]['text']
-       sources = [{"file": m["s3_key"], "score": m["score"], "chunk_index": m["chunk_index"]} for m in matches]
-      
-       return ChatResponse(query=request.query, answer=answer, sources=sources, context_used=context)
-   except Exception as e:
-       logger.error(f"Error answering question: {str(e)}")
-       raise HTTPException(status_code=500, detail=str(e))
+    try:
+        # retrieval 
+        matches = searcher.search_vectors(request.query, limit=request.top_k)
+        context = searcher.format_context(matches)
+
+        # evidence list construction 
+        evidence_list = []
+        for m in matches:
+            evidence_list.append({
+                "text": m.get("text", ""),  # MUST exist in your vector store
+                "timestamp": m.get("timestamp"),
+                "source_type": m.get("source_type", "unknown"),
+                "score": m.get("score")
+            })
+
+        # eval pipeline 
+        result = pipeline.run(request.query, evidence_list)
+
+        metrics = result["metrics"]
+        credibility = result["credibility"]
+
+        # evidence counts
+        n = len(evidence_list)
+        support = int(metrics.get("ESS", 0) * n)
+        contradict = int(metrics.get("ECS", 0) * n)
+
+        # sources
+        sources = [
+            {
+                "file": m.get("s3_key"),
+                "score": m.get("score"),
+                "chunk_index": m.get("chunk_index"),
+                "timestamp": m.get("timestamp")
+            }
+            for m in matches
+        ]
+
+        # LLM overview 
+        overview_prompt = f"""
+You are summarizing a claim evaluation.
+
+Claim:
+{request.query}
+
+Metrics:
+{metrics}
+
+Credibility Score:
+{credibility}
+
+Write a concise 2-3 sentence summary explaining:
+- Whether the claim is credible
+- Whether evidence supports or contradicts it
+- Any uncertainty
+"""
+
+        response = bedrock.converse(
+            modelId=LLM_MODEL,
+            messages=[{"role": "user", "content": [{"text": overview_prompt}]}],
+            inferenceConfig={
+                "maxTokens": 150,
+                "temperature": 0.3
+            }
+        )
+
+        overview = response["output"]["message"]["content"][0]["text"]
+
+        # structured output 
+        return ChatResponse(
+            query=request.query,
+            overview=overview,
+            metrics=metrics,
+            credibility=credibility,
+            evidence_counts={
+                "supporting": support,
+                "contradicting": contradict
+            },
+            sources=sources
+        )
+
+    except Exception as e:
+        logger.error(f"Error in /chat: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/health")

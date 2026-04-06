@@ -1,3 +1,15 @@
 # Environment variables
 .env
 .env.*
+
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache
+logs
+
+# macOS system files
+.DS_Store
+.AppleDouble
+.LSOverride

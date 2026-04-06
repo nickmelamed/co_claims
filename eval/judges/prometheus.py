@@ -1,5 +1,5 @@
 import json 
-from judges.base_judge import BaseJudge
+from .base_judge import BaseJudge
 
 class PrometheusJudge(BaseJudge):
     def __init__(self, client):

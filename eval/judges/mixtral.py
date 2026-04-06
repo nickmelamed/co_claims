@@ -1,5 +1,5 @@
 import json 
-from judges.base_judge import BaseJudge
+from .base_judge import BaseJudge
 
 class MixtralJudge(BaseJudge):
     def __init__(self, client):

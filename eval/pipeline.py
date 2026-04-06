@@ -1,7 +1,6 @@
 class EvaluationPipeline:
     def __init__(
         self,
-        retriever,
         embed_fn,
         reasoner,
         triage,
@@ -11,7 +10,6 @@ class EvaluationPipeline:
         debate_engine,
         adjudicator,
     ):
-        self.retriever = retriever
         self.embed_fn = embed_fn
         self.reasoner = reasoner
         self.triage = triage
@@ -41,9 +39,7 @@ class EvaluationPipeline:
             entities=structured.get("entities", [])
         )
 
-    def run(self, claim):
-        # retrieval 
-        evidence_list = self.retriever.retrieve(claim)
+    def run(self, claim, evidence_list):
 
         # embedding 
         claim_embedding = self.embed_fn(claim)

@@ -1,0 +1,70 @@
+# ------------------------
+# Python cache
+# ------------------------
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# ------------------------
+# Virtual environments
+# ------------------------
+.venv/
+venv/
+env/
+
+# ------------------------
+# Pytest / test artifacts
+# ------------------------
+.pytest_cache/
+coverage/
+htmlcov/
+
+# ------------------------
+# Logs
+# ------------------------
+# logs/
+# *.log
+
+# ------------------------
+# Local data / storage
+# ------------------------
+qdrant_storage/
+datasets/
+
+# ------------------------
+# Environment files
+# ------------------------
+.env
+
+# ------------------------
+# Git
+# ------------------------
+.git
+.gitignore
+
+# ------------------------
+# OS / editor junk
+# ------------------------
+.DS_Store
+.vscode/
+.idea/
+
+# ------------------------
+# Not needed in API container
+# ------------------------
+#Dockerfile.ui
+#ui.py
+
+# ------------------------
+# Misc dev scripts
+# ------------------------
+embedding_test.py
+test.py
+validate_bedrock_signature_error.py
+
+# ------------------------
+# Docs
+# ------------------------
+setup.md
+Makefile
