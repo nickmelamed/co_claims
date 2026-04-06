@@ -2,12 +2,14 @@ from judges.prometheus import PrometheusJudge
 from judges.mixtral import MixtralJudge
 from judges.deepseek import DeepSeekJudge
 from judges.ensemble import JudgeEnsemble
-from judges.client import LocalLLMClient
+from judges.client import BedrockClient
 from evaluator.llm.metrics import UnifiedLLMJudge
 
 from evaluator.executor import UnifiedExecutor
 from evaluator.deterministic.metrics import DeterministicMetrics
 from evaluator.aggregator import Aggregator
+
+from input.retriever import RAGRetriever
 
 from escalator.router import EscalationRouter
 from uncertainty.analyzer import UncertaintyAnalyzer
@@ -27,31 +29,12 @@ from datetime import datetime
 
 EMBED_MODEL = SentenceTransformer("all-MiniLM-L6-v2")
 
-
-class DummyRetriever:
-    def retrieve(self, claim, extra=False):
-        return [
-            {
-                "text": "The model improves accuracy by 5% on benchmark datasets.",
-                "timestamp": datetime.fromisoformat("2023-04-01"),
-                "source_type": "benchmark",
-                "domain": "ml"
-            },
-            {
-                "text": "Some studies show no improvement in performance.",
-                "timestamp": datetime.fromisoformat("2024-04-01"),
-                "source_type": "technical_blog",
-                "domain": "ml"
-            }
-        ]
-
-
 def embed_fn(text):
     return EMBED_MODEL.encode(text).tolist()
 
 
 def get_client(model_name: str):
-    return LocalLLMClient(model_name)
+    return BedrockClient(model_name)
 
 
 def main():
@@ -95,7 +78,7 @@ def main():
 
     # pipeline 
     pipeline = EvaluationPipeline(
-        retriever=DummyRetriever(),
+        retriever=RAGRetriever(),
         embed_fn=embed_fn,
         reasoner=reasoner,
         triage=triage,
