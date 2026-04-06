@@ -6,6 +6,9 @@ from eval.judges.ensemble import JudgeEnsemble
 from eval.judges.client import BedrockClient
 from eval.evaluator.llm.metrics import UnifiedLLMJudge
 
+from eval.structuring.entity_resolver import EntityResolver
+from eval.evaluator.deterministic.extractor import FeatureExtractor
+
 from eval.evaluator.executor import UnifiedExecutor
 from eval.evaluator.deterministic.metrics import DeterministicMetrics
 from eval.evaluator.aggregator import Aggregator
@@ -56,6 +59,15 @@ def build_pipeline():
 
     # Pipeline components
     reasoner = ClaimReasoner(deepseek)
+
+    extractor = FeatureExtractor()
+
+    entity_resolver = EntityResolver(
+        extractor=extractor,
+        reasoner=reasoner # can set to none to disable LLM 
+    )
+
+
     triage = EvidenceTriage(Similarity())
     router = EscalationRouter()
     uncertainty = UncertaintyAnalyzer()
@@ -65,6 +77,7 @@ def build_pipeline():
 
     return EvaluationPipeline(
         embed_fn=embed_fn,
+        entity_resolver=entity_resolver,
         reasoner=reasoner,
         triage=triage,
         metric_executor=metric_executor,

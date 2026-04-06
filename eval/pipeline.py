@@ -2,6 +2,7 @@ class EvaluationPipeline:
     def __init__(
         self,
         embed_fn,
+        entity_resolver,
         reasoner,
         triage,
         metric_executor,
@@ -11,6 +12,7 @@ class EvaluationPipeline:
         adjudicator,
     ):
         self.embed_fn = embed_fn
+        self.entity_resolver = entity_resolver
         self.reasoner = reasoner
         self.triage = triage
         self.metrics = metric_executor
@@ -31,12 +33,12 @@ class EvaluationPipeline:
                     claim_embedding, e["embedding"]
                 )
 
-    def _evaluate(self, claim, structured, evidence_list):
+    def _evaluate(self, claim, structured, evidence_list, entities):
         return self.metrics.evaluate(
             claim=claim,
             claim_time=structured.get("claim_time"),
             evidence_list=evidence_list,
-            entities=structured.get("entities", [])
+            entities=entities,
         )
 
     def run(self, claim, evidence_list):
@@ -45,8 +47,15 @@ class EvaluationPipeline:
         claim_embedding = self.embed_fn(claim)
         self._embed_evidence(evidence_list)
 
-        # claim structuring 
-        structured = self.reasoner.structure(claim)
+        # claim structuring w/ entity resolution 
+
+        resolved = self.entity_resolver(
+            claim,
+            evidence_list
+        )
+
+        entities = resolved['entities']
+        structured = resolved['structured']
 
         # relevance and triage 
         self._attach_relevance(claim_embedding, evidence_list)
@@ -60,7 +69,8 @@ class EvaluationPipeline:
         metric_outputs = self._evaluate(
             claim,
             structured,
-            filtered_evidence
+            filtered_evidence,
+            entities
         )
 
         metrics = metric_outputs["metrics"]
@@ -82,11 +92,11 @@ class EvaluationPipeline:
             actions = set(decision_obj["actions"])
 
             # Claim modifications
-            if "rephrase_claim" in actions:
-                claim = self.reasoner.rephrase(claim)
+            if "rephrase_claim" in actions and self.entity_resolve.reasoner:
+                claim = self.entity_resolver.reasoner.rephrase(claim)
 
-            if "refine_claim" in actions:
-                structured = self.reasoner.structure(claim)
+            if "refine_claim" in actions and self.entity_resolver.reasoner:
+                structured = self.entity_resolver.reasoner.structure(claim)
                 claim = structured.get("refined_claim", claim)
 
             # Global reset
@@ -107,10 +117,16 @@ class EvaluationPipeline:
                     filtered_evidence.extend(new_evidence)
 
             # Re-evaluate after changes
+
+            resolved = self.entity_resolver.resolve(claim, filtered_evidence)
+            entities = resolved['metrics']
+            structured = resolved['structured']
+
             metric_outputs = self._evaluate(
                 claim,
                 structured,
-                filtered_evidence
+                filtered_evidence,
+                entities
             )
 
             metrics = metric_outputs["metrics"]
@@ -134,5 +150,6 @@ class EvaluationPipeline:
             "decision": decision_obj,
             "credibility": metric_outputs["final_score"],
             "structured": structured,
+            "entities": entities,
             "raw_judgments": metric_outputs.get("raw_judgments")
         }
