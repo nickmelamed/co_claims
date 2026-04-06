@@ -8,6 +8,7 @@ from RAGSearch import RAGSearcher
 from logger_utils import get_logger
 
 from eval.config import build_pipeline
+from eval.judges.client import BedrockClient
 
 # Configuration
 AWS_REGION = os.getenv("AWS_REGION", "us-east-1")
@@ -16,7 +17,7 @@ AUTH_TOKEN = os.getenv("AUTH_TOKEN")
 
 # Initialize
 app = FastAPI(title="RAG AI Search Service", version="1.0.0")
-bedrock = boto3.client("bedrock-runtime", region_name=AWS_REGION)
+llm = BedrockClient(LLM_MODEL)
 logger = get_logger("RAGService")
 
 
@@ -128,16 +129,11 @@ Write a concise 2-3 sentence summary explaining:
 - Any uncertainty
 """
 
-        response = bedrock.converse(
-            modelId=LLM_MODEL,
-            messages=[{"role": "user", "content": [{"text": overview_prompt}]}],
-            inferenceConfig={
-                "maxTokens": 150,
-                "temperature": 0.3
-            }
-        )
-
-        overview = response["output"]["message"]["content"][0]["text"]
+        overview = llm.chat(
+         overview_prompt,
+         temperature=0.3,
+         max_tokens=150
+      )
 
         # structured output 
         return ChatResponse(

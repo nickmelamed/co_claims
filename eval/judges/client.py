@@ -23,10 +23,13 @@ class BedrockClient:
         self.model_id = model_id
         self.client = get_bedrock_client()
 
-    def chat(self, messages, temperature=0.0, max_tokens=512):
+    def chat(self, prompt: str, temperature=0.0, max_tokens=512):
         response = self.client.converse(
             modelId=self.model_id,
-            messages=[{"role": "user", "content": [{"text": messages}]}],
+            messages=[{
+                "role": "user",
+                "content": prompt   # string not list 
+            }],
             inferenceConfig={
                 "maxTokens": max_tokens,
                 "temperature": temperature
