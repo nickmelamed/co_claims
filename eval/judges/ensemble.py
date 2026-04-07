@@ -1,9 +1,59 @@
 import numpy as np
 import asyncio
 
+METRICS = ["ESS", "ECS", "CMS", "LCS", "HLS"]
+
+DEFAULT_METRIC = {
+    "score": 0.0,
+    "confidence": 0.0
+}
+
+DEFAULT_SCHEMA = {
+    m: DEFAULT_METRIC.copy() for m in METRICS
+}
+
 class JudgeEnsemble:
     def __init__(self, judges):
         self.judges = judges
+
+    def _apply_schema(self, output):
+        if not isinstance(output, dict):
+            output = {}
+
+        structured = {}
+
+        for m in METRICS:
+            val = output.get(m, {})
+
+            if not isinstance(val, dict):
+                val = {}
+
+            structured[m] = {
+                "score": val.get("score", 0.0),
+                "confidence": val.get("confidence", 0.0)
+            }
+
+        return structured
+    
+    def _normalize(self, structured):
+        for m in METRICS:
+            s = structured[m]["score"]
+            c = structured[m]["confidence"]
+
+            try:
+                s = float(s)
+            except:
+                s = 0.0
+
+            try:
+                c = float(c)
+            except:
+                c = 0.0
+
+            structured[m]["score"] = max(0.0, min(1.0, s))
+            structured[m]["confidence"] = max(0.0, min(1.0, c))
+
+        return structured
 
     async def _eval_one(self, judge, prompt):
         return await asyncio.to_thread(judge.evaluate, prompt)
@@ -26,31 +76,33 @@ class JudgeEnsemble:
         return self._aggregate(outputs)
 
     def _aggregate(self, outputs):
-        valid = [o for o in outputs if isinstance(o, dict)]
+        structured_outputs = []
 
-        if not valid:
-            return {}, {}, outputs
+        for o in outputs:
+            try:
+                s = self._apply_schema(o)
+                s = self._normalize(s)
+                structured_outputs.append(s)
+            except Exception:
+                continue
 
-        metrics = valid[0].keys()
-
+        if not structured_outputs:
+            return (
+                {m: 0.0 for m in METRICS},
+                {m: 1.0 for m in METRICS},
+                outputs
+            )
+        
         aggregated_scores = {}
         aggregated_variances = {}
 
-        for m in metrics:
+        for m in METRICS:
             values = []
             weights = []
 
-            for o in valid:
-                if m in o:
-                    val = o[m]
-
-                    if isinstance(val, dict) and "score" in val:
-                        values.append(val["score"])
-                        weights.append(val.get("confidence", 1.0))
-
-                    elif isinstance(val, (int, float)):
-                        values.append(val)
-                        weights.append(1.0)
+            for o in structured_outputs:
+                values.append(o[m]["score"])
+                weights.append(o[m]["confidence"])
 
             if not values:
                 aggregated_scores[m] = 0.0
@@ -58,9 +110,9 @@ class JudgeEnsemble:
                 continue
 
             mean = np.average(values, weights=weights)
-            variance = np.var(values)
+            variance = np.average((values - mean) ** 2, weights=weights)
 
             aggregated_scores[m] = float(mean)
             aggregated_variances[m] = float(variance)
 
-        return aggregated_scores, aggregated_variances, valid
+        return aggregated_scores, aggregated_variances, structured_outputs

@@ -1,6 +1,7 @@
 # Environment variables
 .env
 .env.*
+coclaims*
 
 # Python cache files
 __pycache__/

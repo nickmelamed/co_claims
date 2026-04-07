@@ -145,6 +145,17 @@ Now evaluate:
 <json>
 """
 
+METRICS = ["ESS", "ECS", "CMS", "LCS", "HLS"]
+
+DEFAULT_METRIC = {
+    "score": 0.0,
+    "confidence": 0.0
+}
+
+DEFAULT_SCHEMA = {
+    m: DEFAULT_METRIC.copy() for m in METRICS
+}
+
 
 def extract_json(text):
     try:
@@ -166,20 +177,11 @@ def extract_json(text):
 class UnifiedLLMJudge:
     def __init__(self, ensemble):
         self.ensemble = ensemble
-
-    def evaluate_single(self, claim, evidence_text, field):
-        prompt = UNIFIED_PROMPT.format(
-            claim=claim,
-            evidence=evidence_text
-        )
-
-        return self.ensemble.evaluate(prompt, field=field)
+        self.metrics = ["ESS", "ECS", "CMS", "LCS", "HLS"]
 
     def evaluate(self, claim, evidence_list, relevances):
-        metrics = ["ESS", "ECS", "CMS", "LCS", "HLS"]
-
-        final_scores = {m: 0.0 for m in metrics}
-        final_variances = {m: 0.0 for m in metrics}
+        final_scores = {m: 0.0 for m in self.metrics}
+        final_variances = {m: 0.0 for m in self.metrics}
 
         weight_sum = sum(relevances) + 1e-6
 
@@ -189,15 +191,20 @@ class UnifiedLLMJudge:
                 evidence=e["text"]
             )
 
-            scores, variances, raw = self.ensemble.evaluate(prompt)
+            try:
+                scores, variances, _ = self.ensemble.evaluate(prompt)
 
-            for m in metrics:
-                final_scores[m] += scores.get(m, 0.0) * r
-                final_variances[m] += variances.get(m, 0.0)
+            except Exception:
+                scores = {m: 0.0 for m in self.metrics}
+                variances = {m: 1.0 for m in self.metrics}
 
-        # normalize
-        for m in metrics:
+            for m in self.metrics:
+                final_scores[m] += scores[m] * r
+                final_variances[m] += variances[m]
+
+        # normalize scores
+        for m in self.metrics:
             final_scores[m] /= weight_sum
             final_variances[m] /= max(1, len(evidence_list))
 
-        return final_scores, final_variances, raw
+        return final_scores, final_variances

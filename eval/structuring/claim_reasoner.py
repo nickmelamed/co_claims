@@ -1,6 +1,15 @@
 # TODO need to edit the output based on desired uses 
 import re
-from datetime import datetime
+from datetime import datetime, UTC
+
+
+DEFAULT_STRUCTURE = {
+    "entities": [],
+    "metrics": [],
+    "direction": None,
+    "scope": None,      
+    "claim_time": None,
+}
 
 STRUCTURE_PROMPT = """
 Parse the claim into structured components.
@@ -19,9 +28,21 @@ Output JSON:
 }}
 """
 
+
 class ClaimReasoner:
     def __init__(self, judge):
         self.judge = judge
+
+    def _apply_schema(self, structured: dict) -> dict:
+        """Merge LLM output with default schema safely."""
+        if not isinstance(structured, dict):
+            structured = {}
+
+        # Only keep known keys (prevents LLM junk pollution)
+        cleaned = {k: structured.get(k) for k in DEFAULT_STRUCTURE.keys()}
+
+        # Fill defaults
+        return {**DEFAULT_STRUCTURE, **cleaned}
 
     def extract_time(self, claim):
         match = re.search(r"(20\d{2})", claim)
@@ -31,12 +52,34 @@ class ClaimReasoner:
         return datetime.utcnow()
 
     def structure(self, claim):
-        structured = self.judge.evaluate(
-            STRUCTURE_PROMPT.format(claim=claim)
-        )
+        try:
+            response = self.judge.evaluate(
+                STRUCTURE_PROMPT.format(claim=claim)
+            )
 
-        # inject deterministic time
-        structured["claim_time"] = self.extract_time(claim)
+            # If evaluate() already returns dict → good
+            structured = response
+
+            # If not, try parsing (optional depending on your setup)
+            if not isinstance(structured, dict):
+                structured = {}
+
+        except Exception:
+            structured = {}
+
+        # apply schema 
+        structured = self._apply_schema(structured)
+
+        # handle claim time robustly
+        try:
+            if self.extract_time is not None:
+                extracted_time = self.extract_time(claim)
+                structured["claim_time"] = extracted_time or datetime.now(UTC)
+            else:
+                structured["claim_time"] = datetime.now(UTC)
+
+        except Exception:
+            structured["claim_time"] = datetime.now(UTC)
 
         return structured
     

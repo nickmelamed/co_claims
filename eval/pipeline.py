@@ -71,6 +71,14 @@ class EvaluationPipeline:
         entities = resolved['entities']
         structured = resolved['structured']
 
+        if structured is None:
+            structured = {}
+            print("Reasoner returned None for claim: ", claim)
+        
+        if entities is None:
+            entities = []
+            print("Reasoner returned no entities for: ", claim)
+
         # embedding 
         self._embed_evidence(evidence_list)
 
@@ -149,8 +157,20 @@ class EvaluationPipeline:
                 claim,
                 filtered_evidence
             )
+
+            if resolved is None: 
+                resolved = {"entities": [], "structured": {}}
+
             entities = resolved['entities']
             structured = resolved['structured']
+
+            if structured is None:
+                structured = {}
+                print("Reasoner returned None for claim: ", claim)
+        
+            if entities is None:
+                entities = []
+                print("Reasoner returned no entities for: ", claim)
 
             metric_outputs = await self._evaluate(
                 claim,
@@ -188,5 +208,5 @@ class EvaluationPipeline:
             "credibility": metric_outputs["final_score"],
             "structured": structured,
             "entities": entities,
-            "raw_judgments": metric_outputs.get("raw_judgments")
+            #"raw_judgments": metric_outputs.get("raw_judgments")
         }
