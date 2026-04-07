@@ -45,10 +45,10 @@ class EvaluationPipeline:
                     claim_embedding, e["embedding"]
                 )
 
-    async def _evaluate(self, claim, structured, evidence_list, entities):
+    async def _evaluate(self, claim, claim_time, evidence_list, entities):
         return await self.metrics.evaluate(
             claim=claim,
-            claim_time=structured.get("claim_time"),
+            claim_time=claim_time,
             evidence_list=evidence_list,
             entities=entities,
         )
@@ -66,18 +66,16 @@ class EvaluationPipeline:
         )
 
         if resolved is None:
-            resolved = {"entities": [], "structured": {}}
+            resolved = {"entities": []}
 
         entities = resolved['entities']
-        structured = resolved['structured']
 
-        if structured is None:
-            structured = {}
-            print("Reasoner returned None for claim: ", claim)
-        
+        # debugging 
         if entities is None:
             entities = []
             print("Reasoner returned no entities for: ", claim)
+
+        claim_time = self.reasoner.extract_time(claim)
 
         # embedding 
         self._embed_evidence(evidence_list)
@@ -93,7 +91,7 @@ class EvaluationPipeline:
         # initial evaluation 
         metric_outputs = await self._evaluate(
             claim,
-            structured,
+            claim_time,
             filtered_evidence,
             entities
         )
@@ -123,12 +121,14 @@ class EvaluationPipeline:
                     claim
                 )
 
+            # TODO: implement proper logic given what "refine claim" means 
             if "refine_claim" in actions and self.entity_resolver.reasoner:
-                structured = await asyncio.to_thread(
-                    self.entity_resolver.reasoner.structure,
-                    claim
-                )
-                claim = structured.get("refined_claim", claim)
+                # structured = await asyncio.to_thread(
+                #     self.entity_resolver.reasoner.structure,
+                #     claim
+                # )
+                # claim = structured.get("refined_claim", claim)
+                pass
 
             # Global reset
             # TODO: implement proper logic given new RAG 
@@ -159,22 +159,19 @@ class EvaluationPipeline:
             )
 
             if resolved is None: 
-                resolved = {"entities": [], "structured": {}}
+                resolved = {"entities": []}
 
             entities = resolved['entities']
-            structured = resolved['structured']
-
-            if structured is None:
-                structured = {}
-                print("Reasoner returned None for claim: ", claim)
         
             if entities is None:
                 entities = []
                 print("Reasoner returned no entities for: ", claim)
 
+            claim_time = self.reasoner.extract_time(claim)
+
             metric_outputs = await self._evaluate(
                 claim,
-                structured,
+                claim_time,
                 filtered_evidence,
                 entities
             )
@@ -206,7 +203,6 @@ class EvaluationPipeline:
             "variances": variances,
             "decision": decision_obj,
             "credibility": metric_outputs["final_score"],
-            "structured": structured,
             "entities": entities,
             #"raw_judgments": metric_outputs.get("raw_judgments")
         }

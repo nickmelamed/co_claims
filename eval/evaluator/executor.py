@@ -125,7 +125,7 @@ class UnifiedExecutor:
         return self._mean(values), self._mean(variances)
 
     # deterministic metrics
-    def compute_deterministic_metrics(self, claim_time, evidence_list, entities):
+    def compute_deterministic_metrics(self, claim_time, evidence_list):
         n = len(evidence_list)
 
         timestamps = [e.get("timestamp", claim_time) for e in evidence_list]

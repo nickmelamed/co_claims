@@ -1,87 +1,74 @@
 # TODO need to edit the output based on desired uses 
 import re
 from datetime import datetime, UTC
+import json
 
+ENTITY_EXTRACTION_PROMPT = """
+Extract key entities from the claim.
 
-DEFAULT_STRUCTURE = {
-    "entities": [],
-    "metrics": [],
-    "direction": None,
-    "scope": None,      
-    "claim_time": None,
-}
+Definition:
+- Entities = companies, people, products, locations, or measurable concepts
 
-STRUCTURE_PROMPT = """
-Parse the claim into structured components.
+Rules:
+- Return ONLY a JSON list
+- No explanations
+- No duplicates
+- Keep entities short and normalized
 
 Claim:
 {claim}
 
-Output JSON:
-{{
-  "entities": [],
-  "metrics": [],
-  "direction": "increase/decrease/none",
-  "scope": "broad/specific",
-  "modality": "strong/hedged",
-  "decomposed_claims": []
-}}
+Output:
+["entity1", "entity2", ...]
 """
-
 
 class ClaimReasoner:
     def __init__(self, judge):
         self.judge = judge
 
-    def _apply_schema(self, structured: dict) -> dict:
-        """Merge LLM output with default schema safely."""
-        if not isinstance(structured, dict):
-            structured = {}
+    def _safe_parse_list(self, text):
+        try:
+            return json.loads(text)
+        except:
+            match = re.search(r"\[.*\]", text, re.DOTALL)
+            if match:
+                try:
+                    return json.loads(match.group())
+                except:
+                    return []
+        return []
 
-        # Only keep known keys (prevents LLM junk pollution)
-        cleaned = {k: structured.get(k) for k in DEFAULT_STRUCTURE.keys()}
+    def extract_entities(self, claim):
+        try:
+            response = self.judge.evaluate(
+                ENTITY_EXTRACTION_PROMPT.format(claim=claim)
+            )
 
-        # Fill defaults
-        return {**DEFAULT_STRUCTURE, **cleaned}
+            # Handle cases where model returns string
+            if isinstance(response, str):
+                entities = self._safe_parse_list(response)
+            else:
+                entities = response
+
+            if not isinstance(entities, list):
+                return []
+
+            # normalize
+            return [
+                e.strip().lower()
+                for e in entities
+                if isinstance(e, str) and len(e.strip()) > 0
+            ]
+
+        except Exception:
+            return []
 
     def extract_time(self, claim):
         match = re.search(r"(20\d{2})", claim)
         if match:
             return datetime(int(match.group(1)), 1, 1)
 
-        return datetime.utcnow()
-
-    def structure(self, claim):
-        try:
-            response = self.judge.evaluate(
-                STRUCTURE_PROMPT.format(claim=claim)
-            )
-
-            # If evaluate() already returns dict → good
-            structured = response
-
-            # If not, try parsing (optional depending on your setup)
-            if not isinstance(structured, dict):
-                structured = {}
-
-        except Exception:
-            structured = {}
-
-        # apply schema 
-        structured = self._apply_schema(structured)
-
-        # handle claim time robustly
-        try:
-            if self.extract_time is not None:
-                extracted_time = self.extract_time(claim)
-                structured["claim_time"] = extracted_time or datetime.now(UTC)
-            else:
-                structured["claim_time"] = datetime.now(UTC)
-
-        except Exception:
-            structured["claim_time"] = datetime.now(UTC)
-
-        return structured
+        return datetime.now(UTC)
     
     def rephrase(self, claim):
         prompt = """

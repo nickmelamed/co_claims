@@ -25,11 +25,11 @@ class FeatureExtractor:
         nlp = get_nlp()
         doc = nlp(text)
 
-        tokens = {t.text.lower() for t in doc if not t.is_stop}
+        #tokens = {t.text.lower() for t in doc if not t.is_stop}
         entities = {chunk.text.lower() for chunk in doc.noun_chunks}
 
         return {
-            "tokens": tokens,
+            #"tokens": tokens,
             "entities": entities,
-            "doc": doc
+            #"doc": doc
         }
