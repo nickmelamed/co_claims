@@ -68,16 +68,20 @@ class RAGSearcher:
         )
         matches = []
         points = results.points
-       # self.logger.info(f"These are points {points}")
+        self.logger.info(f"These are points {points}")
+        print(f"These are points {points}")
 
         for point in points:
             payload = point.payload or {}
             matches.append(
                 {
-                    "text": payload["text"],
+                    "text": payload.get("text", ""),
                     "score": point.score,
-                    "s3_key": payload["s3_key"],
-                    "chunk_index": payload['chunk_index'],
+                    "s3_key": payload.get("s3_key", ""),
+                    "chunk_index": payload.get("chunk_index", 0),
+                    "filing_date": payload.get("filing_date", ""),
+                    "fact_type": payload.get("fact_type", ""),
+                    "source_url": payload.get("source_url", ""),
                 }
             )
         return matches
@@ -90,7 +94,9 @@ class RAGSearcher:
         context_parts = []
         for i, match in enumerate(matches, 1):
             context_parts.append(
-                f"[Source {i}] (Score: {match['score']:.3f}, File: {match['s3_key']})\n"
+                f"[Source {i}] (Score: {match['score']:.3f} | File: {match['s3_key']} | "
+                f"Type: {match['fact_type']} | Date: {match['filing_date']} | "
+                f"URL: {match['source_url']})\n"
                 f"{match['text']}\n"
             )
 

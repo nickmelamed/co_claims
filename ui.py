@@ -74,7 +74,7 @@ def trigger_ingestion(bucket: str = "co-claims-scraped-data", prefix: str = "mdn
            f"{st.session_state.api_url}/ingest",
            headers=get_headers(),
            json={"bucket": bucket, "prefix": prefix},
-           timeout=300
+           timeout=None
        )
        return response.json()
    except Exception as e:
@@ -149,9 +149,13 @@ for message in st.session_state.messages:
            with st.expander("📚 View Sources"):
                for i, source in enumerate(message["sources"], 1):
                    st.markdown(f"""
-                   **Source {i}**: `{source['file']}` 
-                   - Relevance Score: {source['score']:.3f} 
-                   - Chunk: {source['chunk_index']}
+**Source {i}**
+- **File**: `{source.get('s3_key', '')}`
+- **Relevance Score**: {source['score']:.3f}
+- **Chunk**: {source.get('chunk_index', '')}
+- **Fact Type**: {source.get('fact_type', '—')}
+- **Filing Date**: {source.get('filing_date', '—') or '—'}
+- **Source URL**: {source.get('source_url', '—') or '—'}
                    """)
 
 # Chat input
@@ -185,9 +189,13 @@ if prompt := st.chat_input("Ask a question about your documents..."):
                     with st.expander("📚 View Sources"):
                         for i, source in enumerate(sources, 1):
                             st.markdown(f"""
-                            **Source {i}**: `{source['file']}` 
-                            - Relevance Score: {source['score']:.3f} 
-                            - Chunk: {source['chunk_index']}
+**Source {i}**
+- **File**: `{source.get('s3_key', '')}`
+- **Relevance Score**: {source['score']:.3f}
+- **Chunk**: {source.get('chunk_index', '')}
+- **Fact Type**: {source.get('fact_type', '—')}
+- **Filing Date**: {source.get('filing_date', '—') or '—'}
+- **Source URL**: {source.get('source_url', '—') or '—'}
                             """)
               
                 # Add assistant message to chat

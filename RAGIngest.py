@@ -28,7 +28,7 @@ class RAGIngestor:
         chunk_overlap: int = 150,
         csv_chunksize: int = 2000,
         upsert_batch_size: int = 100,
-        max_embed_workers: int = 4,
+        max_embed_workers: int = 8,
         checkpoint_file: str = ".ingest_checkpoint.json",
     ):
         self.collection_name = collection_name
@@ -37,7 +37,7 @@ class RAGIngestor:
         self.csv_chunksize = csv_chunksize
         self.upsert_batch_size = upsert_batch_size
         self.max_embed_workers = max_embed_workers
-        self.aws_region = aws_region or os.getenv("AWS_REGION", "us-east-1")
+        self.aws_region = aws_region or os.getenv("AWS_REGION", "us-west-2")
         self.logger = get_logger("RAGIngestorNew")
 
         # Embeddings
@@ -245,6 +245,7 @@ class RAGIngestor:
         self,
         pending: List[Tuple[str, Dict[str, Any]]],
         stats: Dict[str, Any],
+        max_retries: int = 3,
     ) -> None:
         if not pending:
             return
@@ -257,8 +258,26 @@ class RAGIngestor:
                 PointStruct(id=str(uuid.uuid4()), vector=vec, payload=payload)
                 for vec, payload in zip(vectors, payloads)
             ]
-            self.upsert_points(points)
-            stats["total_points"] += len(points)
+
+            last_exc: Optional[Exception] = None
+            for attempt in range(1, max_retries + 1):
+                try:
+                    self.upsert_points(points)
+                    stats["total_points"] += len(points)
+                    break
+                except Exception as exc:
+                    last_exc = exc
+                    wait = 2 ** attempt
+                    self.logger.warning(
+                        f"Qdrant upsert attempt {attempt}/{max_retries} failed "
+                        f"({len(points)} points): {exc} — retrying in {wait}s"
+                    )
+                    time.sleep(wait)
+            else:
+                err = f"Failed embedding/upserting batch of {len(pending)} chunks after {max_retries} retries: {last_exc}"
+                self.logger.error(err)
+                stats["errors"].append(err)
+
         except Exception as exc:
             err = f"Failed embedding/upserting batch of {len(pending)} chunks: {exc}"
             self.logger.error(err)

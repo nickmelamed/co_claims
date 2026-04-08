@@ -11,7 +11,7 @@ from RAGSearch import RAGSearcher
 from logger_utils import get_logger
 
 # Configuration
-AWS_REGION = os.getenv("AWS_REGION", "us-east-1")
+AWS_REGION = os.getenv("AWS_REGION", "us-west-2")
 LLM_MODEL = os.getenv("LLM_MODEL", "us.amazon.nova-2-lite-v1:0")
 AUTH_TOKEN = os.getenv("AUTH_TOKEN")
 INGEST_TIMING_FILE = os.getenv("INGEST_TIMING_FILE", "logs/ingest_timing.log")
@@ -22,7 +22,7 @@ bedrock = boto3.client("bedrock-runtime", region_name=AWS_REGION)
 logger = get_logger("RAGService")
 
 # Initialize RAG components (using default index name "knowledge")
-ingestor = RAGIngestor(aws_region=AWS_REGION)
+ingestor = RAGIngestor(aws_region=AWS_REGION, max_embed_workers=24)
 searcher = RAGSearcher(collection_name="knowledge", aws_region=AWS_REGION)
 
 
@@ -119,7 +119,17 @@ def chat(request: ChatRequest, authorized: bool = Depends(verify_auth)):
        )
       
        answer = response['output']['message']['content'][0]['text']
-       sources = [{"file": m["s3_key"], "score": m["score"], "chunk_index": m["chunk_index"]} for m in matches]
+       sources = [
+           {
+               "s3_key": m["s3_key"],
+               "score": m["score"],
+               "chunk_index": m["chunk_index"],
+               "filing_date": m["filing_date"],
+               "fact_type": m["fact_type"],
+               "source_url": m["source_url"],
+           }
+           for m in matches
+       ]
       
        return ChatResponse(query=request.query, answer=answer, sources=sources, context_used=context)
    except Exception as e:
