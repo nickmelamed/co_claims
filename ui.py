@@ -181,19 +181,20 @@ with st.sidebar:
 
 # Main chat interface
 #st.title("CoClaims AI") # Updated title
+#logo to match website
 st.markdown("""
-<div style="display: flex; align-items: center; gap: 16px;">
+<div style="display: flex; align-items: center; gap: 24px;">
     <div style="
         display: flex;
         align-items: center;
         justify-content: center;
-        width: 100px;
-        height: 100px;
+        width: 180px;
+        height: 180px;
         background-color: #1e293b;
-        border: 2px solid rgba(59,130,246,0.3);
+        border: 3px solid rgba(59,130,246,0.3);
         border-radius: 9999px;
     ">
-        <svg xmlns="http://www.w3.org/2000/svg" width="50" height="50"
+        <svg xmlns="http://www.w3.org/2000/svg" width="90" height="90"
             viewBox="0 0 24 24" fill="none" stroke="#f59e0b"
             stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <path d="m8 11 2 2 4-4"></path>
@@ -201,7 +202,7 @@ st.markdown("""
             <path d="m21 21-4.3-4.3"></path>
         </svg>
     </div>
-    <span style="font-size: 48px; font-weight: 700;">CoClaims AI</span>
+    <span style="font-size: 72px; font-weight: 700;">CoClaims AI</span>
 </div>
 """, unsafe_allow_html=True)
 st.caption("Ask a question about a company claim. Then see the outputted evaluation metrics and follow up with me about the results if needed!") # Updated
