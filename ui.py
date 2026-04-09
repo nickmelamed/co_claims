@@ -306,9 +306,34 @@ if prompt := st.chat_input("Ask your question here! Example: Has NVIDIA engaged 
                 "Hedging Level Score (HLS)": 0.33
             }
 
+            overall_score = sum(metrics.values()) / len(metrics)
+
             dashboard, chat = st.columns([3,1])
 
+            with chat:
+                st.markdown("### Overall Credibility Score")
+                filled = int(overall_score * 100)
+                empty = 100 - filled
+                st.markdown(f"""
+<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; padding-top:40px;">
+  <svg width="180" height="180" viewBox="0 0 36 36">
+    <path d="M18 2 a 16 16 0 1 1 0 32 a 16 16 0 1 1 0 -32" fill="none" stroke="#374151" stroke-width="3.5"/>
+    <path d="M18 2 a 16 16 0 1 1 0 32 a 16 16 0 1 1 0 -32" fill="none" stroke="#f59e0b" stroke-width="3.5"
+      stroke-dasharray="{filled:.1f} {empty:.1f}"
+      stroke-linecap="round"
+      transform="rotate(-90 18 18)"/>
+    <text x="18" y="20.5" text-anchor="middle" fill="#ffffff" font-size="7" font-weight="bold">{overall_score:.2f}</text>
+  </svg>
+  <div style="color:#9ca3af; font-size:13px; margin-top:8px;">out of 1.00</div>
+</div>
+""", unsafe_allow_html=True)
+
             with dashboard:
+
+
+            # dashboard, chat = st.columns([3,1])
+
+            # with dashboard:
 
                 # st.markdown("### Evidence Metrics")
 
