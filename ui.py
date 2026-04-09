@@ -95,34 +95,34 @@ with st.sidebar:
   
    st.divider()
   
-   # Query settings
-   st.subheader("Query Settings")
-   top_k = st.slider("Number of sources (top_k)", min_value=1, max_value=10, value=5)
-   temperature = st.slider("Creativity (temperature)", min_value=0.0, max_value=1.0, value=0.7, step=0.1)
+#    # Query settings
+#    st.subheader("Query Settings")
+#    top_k = st.slider("Number of sources (top_k)", min_value=1, max_value=10, value=5)
+#    temperature = st.slider("Creativity (temperature)", min_value=0.0, max_value=1.0, value=0.7, step=0.1)
   
-   st.divider()
+#    st.divider()
   
-   # Ingestion
-   st.subheader("📥 Data Ingestion")
-   with st.expander("Ingest Documents"):
-       bucket = st.text_input("S3 Bucket", value="co-claims-scraped-data")
-       prefix = st.text_input("S3 Prefix", value="mdna_facts_v2_first100.csv")
+#    # Ingestion
+#    st.subheader("📥 Data Ingestion")
+#    with st.expander("Ingest Documents"):
+#        bucket = st.text_input("S3 Bucket", value="co-claims-scraped-data")
+#        prefix = st.text_input("S3 Prefix", value="mdna_facts_v2_first100.csv")
       
-       if st.button("Start Ingestion"):
-           with st.spinner("Ingesting documents..."):
-               result = trigger_ingestion(bucket, prefix)
-               if "error" in result:
-                   st.error(f"Error: {result['error']}")
-               else:
-                   stats = result.get("statistics") or {}
-                   files_n = stats.get("files_processed", 0)
-                   chunks_n = stats.get("total_chunks", 0)
-                   st.success(f"✅ Ingested {files_n} files, {chunks_n} chunks")
-                   errs = stats.get("errors") or []
-                   if errs:
-                       st.warning("Some objects failed:\n" + "\n".join(errs))
+#        if st.button("Start Ingestion"):
+#            with st.spinner("Ingesting documents..."):
+#                result = trigger_ingestion(bucket, prefix)
+#                if "error" in result:
+#                    st.error(f"Error: {result['error']}")
+#                else:
+#                    stats = result.get("statistics") or {}
+#                    files_n = stats.get("files_processed", 0)
+#                    chunks_n = stats.get("total_chunks", 0)
+#                    st.success(f"✅ Ingested {files_n} files, {chunks_n} chunks")
+#                    errs = stats.get("errors") or []
+#                    if errs:
+#                        st.warning("Some objects failed:\n" + "\n".join(errs))
   
-   st.divider()
+#    st.divider()
   
    # Clear conversation
    if st.button("🗑️ Clear Conversation"):
@@ -137,7 +137,30 @@ with st.sidebar:
 
 
 # Main chat interface
-st.title("CoClaims AI") # Updated title
+#st.title("CoClaims AI") # Updated title
+st.markdown("""
+<div style="display: flex; align-items: center; gap: 16px;">
+    <div style="
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100px;
+        height: 100px;
+        background-color: #1e293b;
+        border: 2px solid rgba(59,130,246,0.3);
+        border-radius: 9999px;
+    ">
+        <svg xmlns="http://www.w3.org/2000/svg" width="50" height="50"
+            viewBox="0 0 24 24" fill="none" stroke="#f59e0b"
+            stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m8 11 2 2 4-4"></path>
+            <circle cx="11" cy="11" r="8"></circle>
+            <path d="m21 21-4.3-4.3"></path>
+        </svg>
+    </div>
+    <span style="font-size: 48px; font-weight: 700;">CoClaims AI</span>
+</div>
+""", unsafe_allow_html=True)
 st.caption("Ask a question about a company claim. Then see the outputted evaluation metrics and follow up with me about the results if needed!") # Updated
 
 # Display chat messages
@@ -160,7 +183,7 @@ for message in st.session_state.messages:
                    """)
 
 # Chat input
-if prompt := st.chat_input("Ask a question about your documents..."):
+if prompt := st.chat_input("Ask your question here! Example: Has NVIDIA engaged in circular financing since 2025?"):
    # Add user message to chat
    st.session_state.messages.append({"role": "user", "content": prompt})
   
