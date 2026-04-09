@@ -16,6 +16,49 @@ st.set_page_config(
    layout="wide"
 )
 
+# add dark mode
+st.markdown("""
+<style>
+    /* Main background */
+    .stApp {
+        background-color: #0e1117;
+        color: #ffffff;
+    }
+
+    /* Sidebar */
+    section[data-testid="stSidebar"] {
+        background-color: #111827;
+    }
+
+    /* Text + headers */
+    h1, h2, h3, h4, h5, h6, p, span, label {
+        color: #ffffff !important;
+    }
+
+    /* Inputs */
+    .stTextInput input {
+        background-color: #1f2937;
+        color: white;
+        border: 1px solid #374151;
+    }
+
+    /* Chat bubbles */
+    [data-testid="stChatMessage"] {
+        background-color: #1f2937;
+        border-radius: 10px;
+        padding: 10px;
+    }
+
+    /* Buttons */
+    .stButton button {
+        background-color: #1f2937;
+        color: white;
+        border: 1px solid #374151;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+
 # Initialize session state
 if "messages" not in st.session_state:
    st.session_state.messages = []
