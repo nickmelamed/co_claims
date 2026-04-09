@@ -28,6 +28,12 @@ st.markdown("""
     /* Sidebar */
     section[data-testid="stSidebar"] {
         background-color: #111827;
+        min-width: 500px !important;
+    }
+
+    section[data-testid="stSidebar"] > div {
+        width: 500px !important;
+        min-width: 500px !important;
     }
 
     /* Text + headers */
