@@ -181,8 +181,9 @@ with st.sidebar:
    st.divider()
   
    # Info
-   st.caption("💡 Tip: Ask questions about your documents!")
-   st.caption("📚 Sources are shown below each answer")
+   st.caption("💡 Tip: Clear your conversation before entering a prompt about a new claim.")
+   st.caption("📚 Referenced sources are shown at the bottom with the results of each prompt!")
+   st.caption("PLACEHOLDER - ADD LINK TO METRIC DEFINITIONS DOCUMENT")
 
 
 # Main chat interface
@@ -211,7 +212,7 @@ st.markdown("""
     <span style="font-size: 72px; font-weight: 700;">CoClaims AI</span>
 </div>
 """, unsafe_allow_html=True)
-st.caption("Ask a question about a company claim. Then see the outputted evaluation metrics and follow up with me about the results if needed!") # Updated
+st.caption("Hey there, I'm CoClaims, your personal AI engine for evaluating the claims made by public companies. Input a prompt with a question about a company claim. Then see the outputted evaluation metrics and reference sources!  **Note that nothing displayed here constitutes legal or financial advice.**") # Updated
 
 # Display chat messages
 for message in st.session_state.messages:
@@ -309,12 +310,39 @@ if prompt := st.chat_input("Ask your question here! Example: Has NVIDIA engaged 
 
             with dashboard:
 
+                # st.markdown("### Evidence Metrics")
+
+                # cols = st.columns(4)
+                # i = 0
+                # for k, v in metrics.items():
+                #     cols[i].metric(k, f"{v:.2f}")
+                #     i += 1
+                #     if i == 4:
+                #         cols = st.columns(4)
+                #         i = 0
+
+                # TEST REPLACING METRIC DISLPAY WITH PROGRESS BARS UP TO 1
+
+                # st.markdown("### Evidence Metrics")
+
+                # for k, v in metrics.items():
+                #     st.markdown(f"**{k}** — {v:.2f}")
+                #     st.progress(v)
+
+                #TEST DISPLAY 2
                 st.markdown("### Evidence Metrics")
 
                 cols = st.columns(4)
                 i = 0
                 for k, v in metrics.items():
-                    cols[i].metric(k, f"{v:.2f}")
+                    with cols[i]:
+                        st.markdown(f"**{k}**")
+                        st.markdown(f"""
+<div style="background:#374151; border-radius:6px; height:10px; width:100%;">
+  <div style="background:#f59e0b; width:{v*100}%; height:10px; border-radius:6px;"></div>
+</div>
+<div style="font-size:12px; color:#9ca3af; margin-top:2px;">{v:.2f}</div>
+""", unsafe_allow_html=True)
                     i += 1
                     if i == 4:
                         cols = st.columns(4)
