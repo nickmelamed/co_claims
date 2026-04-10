@@ -1,70 +1,31 @@
-# ------------------------
+# Python environments (THIS IS YOUR MAIN ISSUE)
+coclaims_aws/
+coclaims/
+venv/
+.venv/
+env/
+lib/
+lib64/
+
 # Python cache
-# ------------------------
 __pycache__/
 *.pyc
 *.pyo
-*.pyd
 
-# ------------------------
-# Virtual environments
-# ------------------------
-.venv/
-venv/
-env/
+# HuggingFace / model caches
+.cache/
+.huggingface/
+hf_cache/
 
-# ------------------------
-# Pytest / test artifacts
-# ------------------------
-.pytest_cache/
-coverage/
-htmlcov/
+# Tests (this is where networkx tests came from)
+**/tests/
 
-# ------------------------
-# Logs
-# ------------------------
-# logs/
-# *.log
-
-# ------------------------
-# Local data / storage
-# ------------------------
-qdrant_storage/
-datasets/
-
-# ------------------------
-# Environment files
-# ------------------------
-.env
-
-# ------------------------
 # Git
-# ------------------------
-.git
+.git/
 .gitignore
 
-# ------------------------
-# OS / editor junk
-# ------------------------
+# Logs
+logs/
+
+# OS
 .DS_Store
-.vscode/
-.idea/
-
-# ------------------------
-# Not needed in API container
-# ------------------------
-#Dockerfile.ui
-#ui.py
-
-# ------------------------
-# Misc dev scripts
-# ------------------------
-embedding_test.py
-test.py
-validate_bedrock_signature_error.py
-
-# ------------------------
-# Docs
-# ------------------------
-setup.md
-Makefile
