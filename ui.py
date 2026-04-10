@@ -292,6 +292,8 @@ if prompt := st.chat_input("Ask your question here! Example: Has NVIDIA engaged 
             # --- DUMMY METRICS UI ---
             st.subheader(f"Claim Analysis: {prompt}")
 
+            st.info("Yes, based on the available evidence it does seem like NVIDIA may have engaged in circular financing in 2025, as highlighted by [high value for metric A] and [low value for metric B]. Please see the evidence metrics returned below for more details. THIS IS AN EXAMPLE PLACEHOLDER FOR THE TEXT BASED LLM RESPONSE.")
+
             metrics = {
                 "Evidence Support Score (ESS)": 0.71,
                 "Evidence Contradictory Score (ECS)": 0.42,
@@ -375,12 +377,14 @@ if prompt := st.chat_input("Ask your question here! Example: Has NVIDIA engaged 
 
                 st.markdown("### Supporting vs Contradictory Evidence")
 
-                evidence_chart = pd.DataFrame({
-                    "Type": ["Supporting", "Contradictory"],
-                    "Count": [14, 6]
-                }).set_index("Type")
+                # evidence_chart = pd.DataFrame({
+                #     "Type": ["Supporting", "Contradictory"],
+                #     "Count": [14, 6]
+                # }).set_index("Type")
 
-                st.bar_chart(evidence_chart)
+                # st.bar_chart(evidence_chart)
+
+                st.markdown("**Supporting:** 14 &nbsp;&nbsp;&nbsp; **Contradictory:** 6", unsafe_allow_html=True)
 
                 st.markdown("### Evidence Sources")
 
