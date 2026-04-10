@@ -16,35 +16,23 @@ Evaluate the following metrics (0 to 1):
 
 Definitions:
 - ESS: Degree to which evidence directly supports the claim.
-  0 = no support
-  1 = strong, direct support
-
 - ECS: Degree to which evidence contradicts the claim.
-  0 = no contradiction
-  1 = strong, direct contradiction
-
 - CMS: Degree to which the claim is specific and measurable.
-  0 = vague, not testable
-  1 = precise, quantifiable, testable
-
 - LCS: Logical consistency of the claim.
-  0 = internally contradictory or incoherent
-  1 = fully logically consistent
-
 - HLS: Degree of hedging or uncertainty in the claim.
-  0 = fully certain (no hedging)
-  1 = highly hedged (uncertain, qualified language)
 
-Instructions:
-- Treat each piece of evidence independently before aggregating.
-- Consider both supporting and contradicting evidence.
-- If evidence is insufficient or irrelevant:
-  - ESS should be low
-  - ECS should be low (unless contradiction is explicit)
-  - Confidence should be low
-- Evaluate each metric independently.
+Critical Rules:
+- ESS and ECS must NOT both be high:
+  - If evidence strongly supports → ECS ≈ 0
+  - If evidence strongly contradicts → ESS ≈ 0
+- If evidence is irrelevant:
+  - ESS = 0.0–0.1
+  - ECS = 0.0–0.1
+- If evidence is weakly related:
+  - Reduce ESS/ECS and confidence accordingly
+- Do NOT infer beyond evidence
 
-Scoring guidelines:
+Scoring:
 0.0 = none
 0.25 = weak
 0.5 = moderate
@@ -52,9 +40,9 @@ Scoring guidelines:
 1.0 = definitive
 
 Confidence reflects:
-- amount of evidence
-- agreement across evidence
-- clarity of support or contradiction
+- evidence quality
+- clarity of signal
+- ambiguity
 
 ---
 
@@ -182,6 +170,7 @@ class UnifiedLLMJudge:
     async def evaluate(self, claim, evidence_list, relevances):
         final_scores = {m: 0.0 for m in self.metrics}
         final_variances = {m: 0.0 for m in self.metrics}
+        per_evidence_scores = []
 
         weight_sum = sum(relevances) + 1e-6
 
@@ -193,18 +182,18 @@ class UnifiedLLMJudge:
 
             try:
                 scores, variances, _ = await self.ensemble.evaluate(prompt)
-
             except Exception:
                 scores = {m: 0.0 for m in self.metrics}
                 variances = {m: 1.0 for m in self.metrics}
+
+            per_evidence_scores.append(scores)
 
             for m in self.metrics:
                 final_scores[m] += scores[m] * r
                 final_variances[m] += variances[m]
 
-        # normalize scores
         for m in self.metrics:
             final_scores[m] /= weight_sum
             final_variances[m] /= max(1, len(evidence_list))
 
-        return final_scores, final_variances
+        return final_scores, final_variances, per_evidence_scores

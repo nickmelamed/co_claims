@@ -1,6 +1,5 @@
 import numpy as np
 
-
 class UnifiedExecutor:
     def __init__(self, llm_judge, deterministic_metrics, aggregator):
         self.llm_judge = llm_judge
@@ -8,23 +7,18 @@ class UnifiedExecutor:
         self.aggregator = aggregator
 
     async def evaluate(self, claim, claim_time, evidence_list, entities):
-        # evidence_text = "\n".join([e["text"] for e in evidence_list])
 
-        llm_metrics, llm_variances = await self.llm_judge.evaluate(
+        relevances = [e.get("relevance", 0.5) for e in evidence_list]
+
+        llm_metrics, llm_variances, per_evidence_scores = await self.llm_judge.evaluate(
             claim,
             evidence_list,
-            [e.get("relevance", 0.5) for e in evidence_list]
+            relevances
         )
 
-        if llm_metrics is None:
-            llm_metrics = {}
-        
-        if llm_variances is None:
-            llm_variances = {}
-
-        # coverage score 
         n = len(evidence_list) if evidence_list else 1
 
+        # coverage
         coverage = {
             "timestamp": sum(e.get("timestamp") is not None for e in evidence_list) / n,
             "domain": sum(e.get("domain") not in [None, "unknown"] for e in evidence_list) / n,
@@ -33,64 +27,55 @@ class UnifiedExecutor:
 
         coverage_score = np.mean(list(coverage.values()))
 
-        # Debugging print statements 
-        # print("LLM METRICS:", llm_metrics)
-        # print("LLM VARIANCES:", llm_variances)
-
-        # Claim score + variance
+        # claim score
         claim_score, claim_variance = self.compute_claim_score(
             llm_metrics,
             llm_variances,
             entities
         )
 
-        # Deterministic metrics (no variance)
+        # deterministic scores 
         det_metrics = self.compute_deterministic_metrics(
             claim_time,
             evidence_list,
-            llm_metrics,
-            coverage
+            coverage,
+            per_evidence_scores
         )
 
-        # Evidence score + variance
+        # evidence scores
         evidence_score, evidence_variance = self.compute_evidence_score(
             llm_metrics,
             llm_variances,
             det_metrics
         )
 
-        # Aggregation
-        n = len(evidence_list)
+        # penalties
+        coverage_penalty = (0.5 + 0.5 * coverage_score)
+        uncertainty_penalty = 1 - min(1, evidence_variance)
 
-        # global coverage penalty 
-        evidence_score *= (0.5 + 0.5 * coverage_score)
+        evidence_score *= coverage_penalty * uncertainty_penalty
 
+        # final score
         final_score = self.aggregator.credibility(
             evidence_score,
             claim_score,
             n
         )
 
-        # Outputs
-        all_metrics = {
-            **llm_metrics,
-            **det_metrics,
-            "CScope": self.det.cscope(entities),
-            "claim_score": claim_score,
-            "evidence_score": evidence_score
-        }
-
-        all_variances = {
-            **llm_variances,
-            "claim_variance": claim_variance,
-            "evidence_variance": evidence_variance
-        }
-
         return {
             "final_score": final_score,
-            "metrics": all_metrics,
-            "variances": all_variances,
-            #"raw_judgments": raw
+            "metrics": {
+                **llm_metrics,
+                **det_metrics,
+                "CScope": self.det.cscope(entities),
+                "claim_score": claim_score,
+                "evidence_score": evidence_score
+            },
+            "variances": {
+                **llm_variances,
+                "claim_variance": claim_variance,
+                "evidence_variance": evidence_variance
+            }
         }
 
     # claim score
@@ -99,7 +84,7 @@ class UnifiedExecutor:
 
         values = [
             m.get("CMS", 0),
-            m.get("HLS", 0),
+            1 - m.get("HLS", 0),  # ✅ FIX
             m.get("LCS", 0),
             cscope
         ]
@@ -108,16 +93,16 @@ class UnifiedExecutor:
             v.get("CMS", 0),
             v.get("HLS", 0),
             v.get("LCS", 0),
-            0.0  # deterministic metric
+            0.0
         ]
 
         return self._mean(values), self._mean(variances)
 
-    # evidence scores
+    # evidence score
     def compute_evidence_score(self, llm_m, llm_v, det_m):
         values = [
             llm_m.get("ESS", 0),
-            1 - llm_m.get("ECS", 0),
+            1 - llm_m.get("ECS", 0),  # should be inverted 
             det_m["EAS"],
             det_m["ERS"],
             det_m["ESTS"],
@@ -129,33 +114,25 @@ class UnifiedExecutor:
         variances = [
             llm_v.get("ESS", 0),
             llm_v.get("ECS", 0),
-            0.0,  # deterministic
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0
+            0, 0, 0, 0, 0, 0
         ]
 
         return self._mean(values), self._mean(variances)
 
-    # deterministic metrics
-    def compute_deterministic_metrics(self, claim_time, evidence_list, llm_metrics, coverage):
+    # deterministic 
+    def compute_deterministic_metrics(self, claim_time, evidence_list, coverage, per_evidence_scores):
         n = len(evidence_list)
 
-        timestamps = [e.get("timestamp", claim_time) for e in evidence_list]
+        timestamps = [e.get("timestamp") for e in evidence_list if e.get("timestamp") is not None]
 
-        valid_times = [t for t in timestamps if t is not None]
-
-        if not valid_times:
-            ers = 0.5 # fallback if no times
+        if not timestamps:
+            ers = 0.5
         else:
-            ers = self.det.ers(claim_time, valid_times)
-        
+            ers = self.det.ers(claim_time, timestamps)
+
         ers *= coverage['timestamp']
 
         domains = [e.get("domain", "unknown") for e in evidence_list]
-
         srs = self.det.srs(domains) * coverage['domain']
 
         relevances = [e.get("relevance", 0.5) for e in evidence_list]
@@ -164,11 +141,9 @@ class UnifiedExecutor:
         ests = self.det.ests(relevances, source_types) * coverage['source_type']
         evs = self.det.evs(source_types) * coverage['source_type']
 
-        supports = [llm_metrics.get("ESS", 0.5)] * n
+        # get individual evidence supports 
+        supports = [s.get("ESS", 0.5) for s in per_evidence_scores]
         eags = self.det.eags(supports)
-
-        
-        
 
         return {
             "EAS": self.det.eas(n),
@@ -178,14 +153,6 @@ class UnifiedExecutor:
             "SRS": srs,
             "EVS": evs
         }
-    
 
-
-    # utils
     def _mean(self, values):
-        if not values:
-            return 0.0
-        return sum(values) / len(values)
-
-    def _clip(self, x):
-        return max(0.0, min(1.0, x))
+        return sum(values) / len(values) if values else 0.0
