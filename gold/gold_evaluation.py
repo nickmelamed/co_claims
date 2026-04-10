@@ -33,7 +33,7 @@ RETRIES = 3
 
 # cache 
 class LLMCache:
-    def __init__(self, path=".llm_cache.json"):
+    def __init__(self, path="./gold/llm_cache.json"):
         self.path = Path(path)
         self.cache = self._load()
 
@@ -63,13 +63,19 @@ class LLMCache:
 
 # cohere judge 
 class CohereJudge:
-    def __init__(self, api_key, model="command-a-03-2025"):
+    def __init__(self, api_key, model="command-a-03-2025", cache_path="./gold/cache.json"):
         if not api_key:
             raise ValueError("CO_API_KEY not set")
 
         self.client = cohere.Client(api_key)
         self.model = model
-        self.cache = LLMCache()
+        self.cache_path = cache_path
+
+        try:
+            with open(self.cache_path, "r") as f:
+                self.cache = json.load(f)
+        except:
+            self.cache = {}
 
     async def evaluate(self, claim, evidence_list, relevances):
         loop = asyncio.get_event_loop()
@@ -107,7 +113,28 @@ class CohereJudge:
         responses = await asyncio.gather(*tasks)
 
         for e, r, response in zip(evidence_list, relevances, responses):
-            parsed = self._parse(response.text)
+
+            key = self.cache._key(claim, e['text'])
+
+            if key in self.cache:
+                raw_text = self.cache[key]
+            else:
+                prompt = UNIFIED_PROMPT.format(
+                    claim=claim,
+                    evidence=e["text"][:1000]
+                )
+
+                response = self.client.chat(
+                    model=self.model,
+                    message=prompt,
+                    temperature=0.0
+                )
+
+                raw_text = response.text
+
+                self.cache[key] = raw_text
+
+            parsed = self._parse(raw_text)
             if not parsed:
                 continue
 
