@@ -19,7 +19,7 @@ class MixtralJudge(BaseJudge):
         try:
             text = str(response)  # since Bedrock returns string
 
-            print("RAW TEXT:", text[:500])
+            #print("RAW TEXT:", text[:500])
 
             import re
             match = re.search(r"<json>(.*?)</json>", text, re.DOTALL)
@@ -32,7 +32,7 @@ class MixtralJudge(BaseJudge):
 
             parsed = json.loads(json_str)
 
-            print("PARSED:", parsed)
+            #print("PARSED:", parsed)
 
             return parsed if isinstance(parsed, dict) else {}
 

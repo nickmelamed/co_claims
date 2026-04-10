@@ -88,9 +88,9 @@ class JudgeEnsemble:
             clean_outputs.append(o)
 
         # debugging 
-        print("=== ENSEMBLE RAW OUTPUTS ===")
-        for i, o in enumerate(outputs):
-            print(f"Judge {i}: type={type(o)} value={o}")
+        # print("=== ENSEMBLE RAW OUTPUTS ===")
+        # for i, o in enumerate(outputs):
+        #     print(f"Judge {i}: type={type(o)} value={o}")
 
         return self._aggregate(outputs)
 
@@ -129,7 +129,7 @@ class JudgeEnsemble:
             for o in structured_outputs:
                 values.append(o[m]["score"])
                 weights.append(o[m]["confidence"] + 1e-3)
-                print("RAW JUDGE OUTPUT:", type(o), o) # debugging
+                #print("RAW JUDGE OUTPUT:", type(o), o) # debugging
 
             if not values:
                 aggregated_scores[m] = 0.0
