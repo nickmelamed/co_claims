@@ -88,6 +88,10 @@ class EvaluationPipeline:
             evidence_list
         )
 
+        # # debugging 
+        # print("EVIDENCE BEFORE TRIAGE:", len(evidence_list))
+        # print("EVIDENCE AFTER TRIAGE:", len(filtered_evidence))
+
         # initial evaluation 
         metric_outputs = await self._evaluate(
             claim,

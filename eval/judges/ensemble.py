@@ -76,7 +76,21 @@ class JudgeEnsemble:
             for j in self.judges
         ]
 
-        outputs = await asyncio.gather(*tasks)
+        # debugging 
+
+        outputs = await asyncio.gather(*tasks, return_exceptions=True)
+
+        clean_outputs = []
+        for o in outputs:
+            if isinstance(o, Exception):
+                print("JUDGE FAILED:", o, flush=True)
+                continue
+            clean_outputs.append(o)
+
+        # debugging 
+        print("=== ENSEMBLE RAW OUTPUTS ===")
+        for i, o in enumerate(outputs):
+            print(f"Judge {i}: type={type(o)} value={o}")
 
         return self._aggregate(outputs)
 
@@ -115,6 +129,7 @@ class JudgeEnsemble:
             for o in structured_outputs:
                 values.append(o[m]["score"])
                 weights.append(o[m]["confidence"] + 1e-3)
+                print("RAW JUDGE OUTPUT:", type(o), o) # debugging
 
             if not values:
                 aggregated_scores[m] = 0.0

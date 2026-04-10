@@ -194,10 +194,13 @@ class UnifiedLLMJudge:
 
             try:
                 scores, variances, raw = await self.ensemble.evaluate_async(prompt)
-            except Exception:
+            except Exception as e:
                 scores = {m: 0.0 for m in self.metrics}
                 variances = {m: 1.0 for m in self.metrics}
                 raw = []
+
+                # debugging 
+                print("🚨 LLM CALL FAILED:", str(e), flush=True)
 
             per_evidence_scores.append({
                 m: {
@@ -212,9 +215,9 @@ class UnifiedLLMJudge:
             # confidence-weighted aggregation
             for m in self.metrics:
                 s = scores[m]
-                c = per_evidence_scores[-1][m]["confidence"]
+                c = max(0.3, per_evidence_scores[-1][m]["confidence"])
 
-                weight = (c + 1e-3) * (r + 1e-3)
+                weight = max(c, 0.2) * max(r, 0.2)
 
                 final_scores[m] += s * weight
                 final_weights[m] += weight
@@ -224,11 +227,21 @@ class UnifiedLLMJudge:
 
         # normalize
         for m in self.metrics:
-            if final_weights[m] > 0:
-                final_scores[m] /= final_weights[m]
-                final_variances[m] /= final_weights[m]
-            else:
-                final_scores[m] = 0.0
-                final_variances[m] = 1.0
+          if final_weights[m] > 1e-6:   # want a little over zero for stability
+              final_scores[m] /= final_weights[m]
+              final_variances[m] /= final_weights[m]
+          else:
+              # fallback to unweighted mean if weights are unusable
+              vals = [
+                  o[m]["score"] for o in raw
+                  if isinstance(o.get(m), dict)
+              ]
+
+              if vals:
+                  final_scores[m] = float(np.mean(vals))
+              else:
+                  final_scores[m] = 0.0
+
+              final_variances[m] = 1.0
 
         return final_scores, final_variances, per_evidence_scores

@@ -8,41 +8,34 @@ class MixtralJudge(BaseJudge):
 
     def evaluate(self, prompt):
         response = self.client.chat(
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.3
+            prompt,
+            0.0,     
+            500     
         )
+
         return self._parse(response)
 
     def _parse(self, response):
         try:
-            # Handle multiple response formats safely
-            if hasattr(response, "choices"):  # OpenAI-style
-                text = response.choices[0].message.content
-            elif isinstance(response, dict):
-                # Bedrock-style
-                text = response.get("output", {}) \
-                            .get("message", {}) \
-                            .get("content", [{}])[0] \
-                            .get("text", "")
-            else:
-                text = str(response)
+            text = str(response)  # since Bedrock returns string
 
-            # Extract JSON safely
+            print("RAW TEXT:", text[:500])
+
+            import re
             match = re.search(r"<json>(.*?)</json>", text, re.DOTALL)
 
             if match:
                 json_str = match.group(1)
             else:
-                json_str = text.strip()
+                print("⚠️ NO JSON TAG FOUND")
+                return {}
 
             parsed = json.loads(json_str)
 
-            if not isinstance(parsed, dict):
-                return {}
+            print("PARSED:", parsed)
 
-            return parsed
+            return parsed if isinstance(parsed, dict) else {}
 
         except Exception as e:
-            print("MIXTRAL PARSE FAILED:", e)
-            print("RAW TEXT:", text[:500])
+            print("❌ PARSE FAILED:", e)
             return {}

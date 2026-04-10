@@ -50,9 +50,9 @@ def get_client(model_id):
 def build_pipeline():
 
     # Judges
-    prometheus = PrometheusJudge(client=get_client("prometheus-eval/prometheus-7b-v2.0"))
-    mixtral = MixtralJudge(client=get_client("mistralai/Mistral-7B-Instruct-v0.2"))
-    deepseek = DeepSeekJudge(client=get_client("deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B"))
+    prometheus = PrometheusJudge(client=get_client("anthropic.claude-3-haiku-20240307-v1:0")) #TODO: find replacement model
+    mixtral = MixtralJudge(client=get_client("mistral.mistral-7b-instruct-v0:2"))
+    deepseek = DeepSeekJudge(client=get_client("deepseek.r1-v1:0"))
 
     ensemble = JudgeEnsemble([prometheus, mixtral])
     llm_judge = UnifiedLLMJudge(ensemble)
