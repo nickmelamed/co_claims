@@ -72,7 +72,7 @@ ADJUDICATION_SCHEMA = {
 
 class Adjudicator:
     def __init__(self, judge_model):
-        self.judge_model = judge_model  # Prometheus preferred
+        self.judge_model = judge_model  # Qwen preferred
 
     def _apply_schema(self, result):
       if not isinstance(result, dict):
