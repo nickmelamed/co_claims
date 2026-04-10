@@ -179,7 +179,7 @@ class UnifiedLLMJudge:
         self.ensemble = ensemble
         self.metrics = ["ESS", "ECS", "CMS", "LCS", "HLS"]
 
-    def evaluate(self, claim, evidence_list, relevances):
+    async def evaluate(self, claim, evidence_list, relevances):
         final_scores = {m: 0.0 for m in self.metrics}
         final_variances = {m: 0.0 for m in self.metrics}
 
@@ -192,7 +192,7 @@ class UnifiedLLMJudge:
             )
 
             try:
-                scores, variances, _ = self.ensemble.evaluate(prompt)
+                scores, variances, _ = await self.ensemble.evaluate(prompt)
 
             except Exception:
                 scores = {m: 0.0 for m in self.metrics}
