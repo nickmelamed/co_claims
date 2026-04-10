@@ -102,7 +102,7 @@ class JudgeEnsemble:
 
             for o in structured_outputs:
                 values.append(o[m]["score"])
-                weights.append(o[m]["confidence"])
+                weights.append(o[m]["confidence"] + 1e-3)
 
             if not values:
                 aggregated_scores[m] = 0.0

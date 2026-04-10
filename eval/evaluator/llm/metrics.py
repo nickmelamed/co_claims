@@ -1,5 +1,5 @@
 import json
-
+import numpy as np
 
 UNIFIED_PROMPT = """
 You are evaluating the credibility of a claim using provided evidence.
@@ -169,10 +169,10 @@ class UnifiedLLMJudge:
 
     async def evaluate(self, claim, evidence_list, relevances):
         final_scores = {m: 0.0 for m in self.metrics}
+        final_weights = {m: 0.0 for m in self.metrics}
         final_variances = {m: 0.0 for m in self.metrics}
-        per_evidence_scores = []
 
-        weight_sum = sum(relevances) + 1e-6
+        per_evidence_scores = []
 
         for e, r in zip(evidence_list, relevances):
             prompt = UNIFIED_PROMPT.format(
@@ -181,19 +181,42 @@ class UnifiedLLMJudge:
             )
 
             try:
-                scores, variances, _ = await self.ensemble.evaluate(prompt)
+                scores, variances, raw = await self.ensemble.evaluate(prompt)
             except Exception:
                 scores = {m: 0.0 for m in self.metrics}
                 variances = {m: 1.0 for m in self.metrics}
+                raw = []
 
-            per_evidence_scores.append(scores)
+            per_evidence_scores.append({
+                m: {
+                    "score": scores[m],
+                    "confidence": np.mean([
+                        o[m]["confidence"] for o in raw
+                    ]) if raw else 0.0
+                }
+                for m in self.metrics
+            })
 
+            # confidence-weighted aggregation
             for m in self.metrics:
-                final_scores[m] += scores[m] * r
-                final_variances[m] += variances[m]
+                s = scores[m]
+                c = per_evidence_scores[-1][m]["confidence"]
 
+                weight = (c + 1e-3) * (r + 1e-3)
+
+                final_scores[m] += s * weight
+                final_weights[m] += weight
+
+                # variance accumulation (confidence-weighted)
+                final_variances[m] += variances[m] * weight
+
+        # normalize
         for m in self.metrics:
-            final_scores[m] /= weight_sum
-            final_variances[m] /= max(1, len(evidence_list))
+            if final_weights[m] > 0:
+                final_scores[m] /= final_weights[m]
+                final_variances[m] /= final_weights[m]
+            else:
+                final_scores[m] = 0.0
+                final_variances[m] = 1.0
 
         return final_scores, final_variances, per_evidence_scores

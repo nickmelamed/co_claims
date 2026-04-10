@@ -51,7 +51,7 @@ class UnifiedExecutor:
 
         # penalties
         coverage_penalty = (0.5 + 0.5 * coverage_score)
-        uncertainty_penalty = 1 - min(1, evidence_variance)
+        uncertainty_penalty = np.exp(-evidence_variance)
 
         evidence_score *= coverage_penalty * uncertainty_penalty
 
@@ -84,7 +84,7 @@ class UnifiedExecutor:
 
         values = [
             m.get("CMS", 0),
-            1 - m.get("HLS", 0),  # ✅ FIX
+            1 - m.get("HLS", 0),  # inverted
             m.get("LCS", 0),
             cscope
         ]
@@ -96,7 +96,15 @@ class UnifiedExecutor:
             0.0
         ]
 
-        return self._mean(values), self._mean(variances)
+        values = np.array(values, dtype=float)
+        variances = np.array(variances, dtype=float)
+
+        claim_score = float(np.mean(values))
+        claim_variance = float(np.mean(variances))
+
+        claim_score = self.det._clip(claim_score)
+
+        return claim_score, claim_variance
 
     # evidence score
     def compute_evidence_score(self, llm_m, llm_v, det_m):
@@ -117,7 +125,16 @@ class UnifiedExecutor:
             0, 0, 0, 0, 0, 0
         ]
 
-        return self._mean(values), self._mean(variances)
+        
+        values = np.array(values, dtype=float)
+        variances = np.array(variances, dtype=float)
+
+        evidence_score = float(np.mean(values))
+        evidence_variance = float(np.mean(variances))
+
+        evidence_score = self.det._clip(evidence_score)
+
+        return evidence_score, evidence_variance
 
     # deterministic 
     def compute_deterministic_metrics(self, claim_time, evidence_list, coverage, per_evidence_scores):
@@ -142,8 +159,10 @@ class UnifiedExecutor:
         evs = self.det.evs(source_types) * coverage['source_type']
 
         # get individual evidence supports 
-        supports = [s.get("ESS", 0.5) for s in per_evidence_scores]
-        eags = self.det.eags(supports)
+        supports = [s["ESS"]["score"] for s in per_evidence_scores]
+        weights = [s["ESS"]["confidence"] for s in per_evidence_scores]
+
+        eags = self.det.weighted_avg(supports, weights)
 
         return {
             "EAS": self.det.eas(n),
