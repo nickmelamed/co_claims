@@ -12,6 +12,8 @@ from logger_utils import get_logger
 from eval.config import build_pipeline
 from eval.judges.client import BedrockClient
 
+from eval.evaluator.deterministic.source_types import extract_domain
+
 # Configuration
 AWS_REGION = os.getenv("AWS_REGION", "us-east-1")
 LLM_MODEL = os.getenv("LLM_MODEL", "us.amazon.nova-2-lite-v1:0")
@@ -100,8 +102,10 @@ async def chat(request: ChatRequest, authorized: bool = Depends(verify_auth)):
             evidence_list.append({
                 "text": m.get("text", ""),  # MUST exist in your vector store
                 "timestamp": m.get("timestamp"),
-                "source_type": m.get("source_type", "unknown"),
-                "score": m.get("score", 0.0)
+                "source_type": m.get("fact_type", "unknown"),
+                "score": m.get("score", 0.0),
+                "url": m.get("source_url"),
+                "domain": extract_domain(m.get("url", "")) if m.get("url") else "unknown"
             })
 
         if not evidence_list:

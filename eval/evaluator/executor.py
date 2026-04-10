@@ -22,9 +22,20 @@ class UnifiedExecutor:
         if llm_variances is None:
             llm_variances = {}
 
+        # coverage score 
+        n = len(evidence_list) if evidence_list else 1
+
+        coverage = {
+            "timestamp": sum(e.get("timestamp") is not None for e in evidence_list) / n,
+            "domain": sum(e.get("domain") not in [None, "unknown"] for e in evidence_list) / n,
+            "source_type": sum(e.get("source_type") != "unknown" for e in evidence_list) / n,
+        }
+
+        coverage_score = np.mean(list(coverage.values()))
+
         # Debugging print statements 
-        print("LLM METRICS:", llm_metrics)
-        print("LLM VARIANCES:", llm_variances)
+        # print("LLM METRICS:", llm_metrics)
+        # print("LLM VARIANCES:", llm_variances)
 
         # Claim score + variance
         claim_score, claim_variance = self.compute_claim_score(
@@ -37,7 +48,8 @@ class UnifiedExecutor:
         det_metrics = self.compute_deterministic_metrics(
             claim_time,
             evidence_list,
-            entities
+            llm_metrics,
+            coverage
         )
 
         # Evidence score + variance
@@ -49,6 +61,9 @@ class UnifiedExecutor:
 
         # Aggregation
         n = len(evidence_list)
+
+        # global coverage penalty 
+        evidence_score *= (0.5 + 0.5 * coverage_score)
 
         final_score = self.aggregator.credibility(
             evidence_score,
@@ -125,22 +140,43 @@ class UnifiedExecutor:
         return self._mean(values), self._mean(variances)
 
     # deterministic metrics
-    def compute_deterministic_metrics(self, claim_time, evidence_list):
+    def compute_deterministic_metrics(self, claim_time, evidence_list, llm_metrics, coverage):
         n = len(evidence_list)
 
         timestamps = [e.get("timestamp", claim_time) for e in evidence_list]
+
+        valid_times = [t for t in timestamps if t is not None]
+
+        if not valid_times:
+            ers = 0.5 # fallback if no times
+        else:
+            ers = self.det.ers(claim_time, valid_times)
+        
+        ers *= coverage['timestamp']
+
         domains = [e.get("domain", "unknown") for e in evidence_list]
+
+        srs = self.det.srs(domains) * coverage['domain']
+
         relevances = [e.get("relevance", 0.5) for e in evidence_list]
-        supports = [e.get("support_score", 0.5) for e in evidence_list]
         source_types = [e.get("source_type", "unknown") for e in evidence_list]
+
+        ests = self.det.ests(relevances, source_types) * coverage['source_type']
+        evs = self.det.evs(source_types) * coverage['source_type']
+
+        supports = [llm_metrics.get("ESS", 0.5)] * n
+        eags = self.det.eags(supports)
+
+        
+        
 
         return {
             "EAS": self.det.eas(n),
-            "ERS": self.det.ers(claim_time, timestamps),
-            "ESTS": self.det.ests(relevances, source_types),
-            "EAGS": self.det.eags(supports),
-            "SRS": self.det.srs(domains),
-            "EVS": self.det.evs(source_types)
+            "ERS": ers,
+            "ESTS": ests,
+            "EAGS": eags,
+            "SRS": srs,
+            "EVS": evs
         }
     
 
