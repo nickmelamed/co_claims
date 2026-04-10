@@ -18,19 +18,31 @@ class JudgeEnsemble:
 
     def _apply_schema(self, output):
         if not isinstance(output, dict):
-            output = {}
+            return DEFAULT_SCHEMA.copy()
 
         structured = {}
 
         for m in METRICS:
             val = output.get(m, {})
 
-            if not isinstance(val, dict):
-                val = {}
+            # CASE 1: already correct
+            if isinstance(val, dict):
+                score = val.get("score", 0.0)
+                conf = val.get("confidence", 0.0)
+
+            # CASE 2: raw float score
+            elif isinstance(val, (int, float)):
+                score = val
+                conf = 0.5  # fallback confidence
+
+            # CASE 3: missing
+            else:
+                score = 0.0
+                conf = 0.0
 
             structured[m] = {
-                "score": val.get("score", 0.0),
-                "confidence": val.get("confidence", 0.0)
+                "score": score,
+                "confidence": conf
             }
 
         return structured
