@@ -14,6 +14,7 @@ from eval.judges.client import BedrockClient
 
 from eval.evaluator.deterministic.source_types import classify_source, extract_domain
 
+from datetime import datetime
 
 # Configuration
 AWS_REGION = os.getenv("AWS_REGION", "us-east-1")
@@ -29,6 +30,16 @@ logger = get_logger("RAGService")
 #Pipeline 
 
 pipeline = build_pipeline()
+
+def parse_timestamp(ts):
+    if not ts:
+        return None
+    if isinstance(ts, datetime):
+        return ts
+    try:
+        return datetime.fromisoformat(ts)
+    except:
+        return None
 
 # Initialize RAG components (using default index name "knowledge")
 ingestor = RAGIngestor(aws_region=AWS_REGION)
@@ -129,7 +140,7 @@ async def chat(request: ChatRequest, authorized: bool = Depends(verify_auth)):
 
             evidence_list.append({
                 "text": text,
-                "timestamp": m.get("timestamp"),
+                "timestamp": parse_timestamp(m.get("timestamp")),
                 "source_type": source_type,
                 "score": m.get("score", 0.0),
                 "url": url,
@@ -145,6 +156,16 @@ async def chat(request: ChatRequest, authorized: bool = Depends(verify_auth)):
                 "structured": {},
                 "entities": []
             }
+        
+        # debugging domain/dates
+        print("\n=== RAW EVIDENCE DEBUG ===")
+        for e in evidence_list:
+            print({
+                "url": e.get("url"),
+                "domain": e.get("domain"),
+                "timestamp": e.get("timestamp"),
+                "source_type": e.get("source_type")
+    })
         
         if any(m is None for m in matches):
             logger.warning(f"Found None in matches: {matches}")

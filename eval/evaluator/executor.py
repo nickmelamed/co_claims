@@ -18,15 +18,6 @@ class UnifiedExecutor:
 
         n = len(evidence_list) if evidence_list else 1
 
-        # coverage
-        coverage = {
-            "timestamp": sum(e.get("timestamp") is not None for e in evidence_list) / n,
-            "domain": sum(e.get("domain") not in [None, "unknown"] for e in evidence_list) / n,
-            "source_type": sum(e.get("source_type") != "unknown" for e in evidence_list) / n,
-        }
-
-        coverage_score = np.mean(list(coverage.values()))
-
         # claim score
         claim_score, claim_variance = self.compute_claim_score(
             llm_metrics,
@@ -38,7 +29,6 @@ class UnifiedExecutor:
         det_metrics = self.compute_deterministic_metrics(
             claim_time,
             evidence_list,
-            coverage,
             per_evidence_scores
         )
 
@@ -50,10 +40,9 @@ class UnifiedExecutor:
         )
 
         # penalties
-        coverage_penalty = (0.5 + 0.5 * coverage_score)
         uncertainty_penalty = np.exp(-evidence_variance)
 
-        evidence_score *= coverage_penalty * uncertainty_penalty
+        evidence_score *= uncertainty_penalty
 
         # final score
         final_score = self.aggregator.credibility(
@@ -137,26 +126,29 @@ class UnifiedExecutor:
         return evidence_score, evidence_variance
 
     # deterministic 
-    def compute_deterministic_metrics(self, claim_time, evidence_list, coverage, per_evidence_scores):
+    def compute_deterministic_metrics(self, claim_time, evidence_list, per_evidence_scores):
         n = len(evidence_list)
 
-        timestamps = [e.get("timestamp") for e in evidence_list if e.get("timestamp") is not None]
+        timestamps = [e.get("timestamp") for e in evidence_list]
+        ers = self.det.ers(claim_time, timestamps)
 
-        if not timestamps:
-            ers = 0.5
-        else:
-            ers = self.det.ers(claim_time, timestamps)
-
-        ers *= coverage['timestamp']
-
-        domains = [e.get("domain", "unknown") for e in evidence_list]
-        srs = self.det.srs(domains) * coverage['domain']
+        domains = [
+            d if d and d != "" else "unknown"
+            for d in [e.get("domain") for e in evidence_list]
+        ]
+        srs = self.det.srs(domains)
 
         relevances = [e.get("relevance", 0.5) for e in evidence_list]
         source_types = [e.get("source_type", "unknown") for e in evidence_list]
 
-        ests = self.det.ests(relevances, source_types) * coverage['source_type']
-        evs = self.det.evs(source_types) * coverage['source_type']
+        # debugging 
+        print("\n=== METRIC INPUT DEBUG ===")
+        print("DOMAINS:", domains)
+        print("TIMESTAMPS:", timestamps)
+        print("SOURCE TYPES:", source_types)
+
+        ests = self.det.ests(relevances, source_types)
+        evs = self.det.evs(source_types)
 
         # get individual evidence supports 
         supports = [s["ESS"]["score"] for s in per_evidence_scores]
