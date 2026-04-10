@@ -172,7 +172,7 @@ def extract_json(text):
 
     except Exception as e:
         print("JSON PARSE ERROR:", e)
-        print("RAW TEXT:", text[:500])
+        #print("RAW TEXT:", text[:500])
         return None
 
 
