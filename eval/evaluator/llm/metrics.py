@@ -1,10 +1,12 @@
 import json
 import numpy as np
+import re
 
 UNIFIED_PROMPT = """
 You are evaluating the credibility of a claim using provided evidence.
 
-Use ONLY the provided evidence. Do not use external knowledge.
+Use ONLY the provided evidence for ESS and ECS.
+Evaluate CMS, LCS, and HLS based on the claim itself.
 
 Claim:
 {claim}
@@ -128,9 +130,18 @@ Evidence: "The algorithm increases speed by 50%."
 
 ---
 
-Now evaluate:
+Now evaluate. Output ONLY valid JSON inside <json>...</json> tags. Do not include any extra text. 
 
 <json>
+{{
+  "ESS": {{"score": float, "confidence": float}},
+  "ECS": {{"score": float, "confidence": float}},
+  "CMS": {{"score": float, "confidence": float}},
+  "LCS": {{"score": float, "confidence": float}},
+  "HLS": {{"score": float, "confidence": float}}
+}}
+</json>
+
 """
 
 METRICS = ["ESS", "ECS", "CMS", "LCS", "HLS"]
@@ -147,18 +158,19 @@ DEFAULT_SCHEMA = {
 
 def extract_json(text):
     try:
-        if "<json>" in text:
-            text = text.split("<json>")[-1]
+        # Extract between <json>...</json>
+        match = re.search(r"<json>(.*?)</json>", text, re.DOTALL)
+        if match:
+            text = match.group(1)
+        else:
+            # fallback: try raw text
+            text = text.strip()
 
-        parsed = json.loads(text.strip())
+        return json.loads(text)
 
-        # validate structure
-        if not isinstance(parsed, dict):
-            return None
-
-        return parsed
-
-    except Exception:
+    except Exception as e:
+        print("JSON PARSE ERROR:", e)
+        print("RAW TEXT:", text[:500])
         return None
 
 
@@ -181,7 +193,7 @@ class UnifiedLLMJudge:
             )
 
             try:
-                scores, variances, raw = await self.ensemble.evaluate(prompt)
+                scores, variances, raw = await self.ensemble.evaluate_async(prompt)
             except Exception:
                 scores = {m: 0.0 for m in self.metrics}
                 variances = {m: 1.0 for m in self.metrics}
