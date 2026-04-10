@@ -1,5 +1,5 @@
 from eval.pipeline import EvaluationPipeline
-from eval.judges.prometheus import PrometheusJudge
+from eval.judges.qwen import QwenJudge
 from eval.judges.mixtral import MixtralJudge
 from eval.judges.deepseek import DeepSeekJudge
 from eval.judges.ensemble import JudgeEnsemble
@@ -50,11 +50,11 @@ def get_client(model_id):
 def build_pipeline():
 
     # Judges
-    prometheus = PrometheusJudge(client=get_client("anthropic.claude-3-haiku-20240307-v1:0")) #TODO: find replacement model
+    qwen = QwenJudge(client=get_client("qwen.qwen3-32b-v1:0")) #TODO: find replacement model
     mixtral = MixtralJudge(client=get_client("mistral.mistral-7b-instruct-v0:2"))
     deepseek = DeepSeekJudge(client=get_client("deepseek.r1-v1:0"))
 
-    ensemble = JudgeEnsemble([prometheus, mixtral])
+    ensemble = JudgeEnsemble([qwen, mixtral])
     llm_judge = UnifiedLLMJudge(ensemble)
 
     # Deterministic
@@ -85,8 +85,8 @@ def build_pipeline():
     router = EscalationRouter()
     uncertainty = UncertaintyAnalyzer()
 
-    debate_engine = DebateEngine(prometheus, mixtral)
-    adjudicator = Adjudicator(prometheus)
+    debate_engine = DebateEngine(qwen, mixtral)
+    adjudicator = Adjudicator(qwen)
 
     return EvaluationPipeline(
         embed_fn=embed_fn,

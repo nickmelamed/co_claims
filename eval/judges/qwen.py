@@ -2,7 +2,7 @@ import re
 import json 
 from .base_judge import BaseJudge
 
-class PrometheusJudge(BaseJudge):
+class QwenJudge(BaseJudge):
     def __init__(self, client):
         self.client = client
 
