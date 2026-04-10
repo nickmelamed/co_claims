@@ -12,7 +12,8 @@ from logger_utils import get_logger
 from eval.config import build_pipeline
 from eval.judges.client import BedrockClient
 
-from eval.evaluator.deterministic.source_types import extract_domain
+from eval.evaluator.deterministic.source_types import classify_source, extract_domain
+
 
 # Configuration
 AWS_REGION = os.getenv("AWS_REGION", "us-east-1")
@@ -99,13 +100,27 @@ async def chat(request: ChatRequest, authorized: bool = Depends(verify_auth)):
             if not isinstance(m, dict):
                 continue
 
+            url = m.get("source_url", "")
+            text = m.get("text", "")
+            raw_type = m.get("fact_type", "").lower()
+
+            # hardcoding checks for our two kinds of data
+            if raw_type in ["10-k", "10k", "10-q", "10q"]:
+                source_type = "financial_filing"
+            elif raw_type in ["news", "news_article"]:
+                source_type = "news_article"
+            else:
+                # fallback to classifier
+                source_type = classify_source(url, text)
+            
+
             evidence_list.append({
-                "text": m.get("text", ""),  # MUST exist in your vector store
+                "text": text,
                 "timestamp": m.get("timestamp"),
-                "source_type": m.get("fact_type", "unknown"),
+                "source_type": source_type,
                 "score": m.get("score", 0.0),
-                "url": m.get("source_url"),
-                "domain": extract_domain(m.get("url", "")) if m.get("url") else "unknown"
+                "url": url,
+                "domain": extract_domain(url)
             })
 
         if not evidence_list:

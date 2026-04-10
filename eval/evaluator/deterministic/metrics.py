@@ -57,14 +57,20 @@ class DeterministicMetrics:
         return np.mean(scores)
 
     def ests(self, relevances, source_types):
-        if not source_types:
-             return 0
+        if not relevances or not source_types:
+            return 0
 
         weights = [self.type_weight_fn(t) for t in source_types]
 
+        # base score
         num = sum(r * w for r, w in zip(relevances, weights))
         denom = sum(relevances) + self.EPS
-        return self._clip(num / denom)
+        base_score = num / denom
+
+        # coverage = how many sources are meaningfully typed
+        coverage = sum(1 for t in source_types if t != "unknown") / len(source_types)
+
+        return self._clip(base_score * coverage)
 
     def eags(self, supports):
         if not supports:
@@ -76,14 +82,31 @@ class DeterministicMetrics:
         return 1 - variance
 
     def srs(self, domains):
-            if not domains:
-                return 0
+        if not domains:
+            return 0
 
-            return len(set(domains)) / len(domains)
+        valid_domains = [d for d in domains if d and d != "unknown"]
+
+        if not valid_domains:
+            return 0
+
+        diversity = len(set(valid_domains)) / len(valid_domains)
+
+        # coverage = how many domains are valid
+        coverage = len(valid_domains) / len(domains)
+
+        return self._clip(diversity * coverage)
 
     def evs(self, source_types):
         if not source_types:
             return 0
 
         flags = [self.verifiable_fn(s) for s in source_types]
-        return sum(flags) / len(flags)
+
+        # base score
+        base_score = sum(flags) / len(flags)
+
+        # coverage = how many sources are classified
+        coverage = sum(1 for s in source_types if s != "unknown") / len(source_types)
+
+        return self._clip(base_score * coverage)
