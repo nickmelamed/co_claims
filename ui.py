@@ -3,7 +3,7 @@ import requests
 import json
 import os
 from typing import List, Dict
-import pandas as pd # to display dummy data
+import pandas as pd
 
 # Configuration
 API_URL = "http://rag-service:8000"
@@ -71,6 +71,15 @@ if "messages" not in st.session_state:
 
 if "api_url" not in st.session_state:
    st.session_state.api_url = API_URL
+
+if "analysis_done" not in st.session_state:
+   st.session_state.analysis_done = False
+
+if "followup_messages" not in st.session_state:
+   st.session_state.followup_messages = []
+
+if "followup_count" not in st.session_state:
+   st.session_state.followup_count = 0
 
 
 def get_headers():
@@ -144,50 +153,25 @@ with st.sidebar:
   
    st.divider()
   
-#    # Query settings
-#    st.subheader("Query Settings")
-#    top_k = st.slider("Number of sources (top_k)", min_value=1, max_value=10, value=5)
-#    temperature = st.slider("Creativity (temperature)", min_value=0.0, max_value=1.0, value=0.7, step=0.1)
-  
-#    st.divider()
-  
-#    # Ingestion
-#    st.subheader("📥 Data Ingestion")
-#    with st.expander("Ingest Documents"):
-#        bucket = st.text_input("S3 Bucket", value="co-claims-scraped-data")
-#        prefix = st.text_input("S3 Prefix", value="mdna_facts_v2_first100.csv")
-      
-#        if st.button("Start Ingestion"):
-#            with st.spinner("Ingesting documents..."):
-#                result = trigger_ingestion(bucket, prefix)
-#                if "error" in result:
-#                    st.error(f"Error: {result['error']}")
-#                else:
-#                    stats = result.get("statistics") or {}
-#                    files_n = stats.get("files_processed", 0)
-#                    chunks_n = stats.get("total_chunks", 0)
-#                    st.success(f"✅ Ingested {files_n} files, {chunks_n} chunks")
-#                    errs = stats.get("errors") or []
-#                    if errs:
-#                        st.warning("Some objects failed:\n" + "\n".join(errs))
-  
-#    st.divider()
-  
    # Clear conversation
-   if st.button("🗑️ Clear Conversation"):
+   if st.button("🗑️ Clear Conversation", use_container_width=True):
        st.session_state.messages = []
+       st.session_state.analysis_done = False
+       st.session_state.followup_messages = []
+       st.session_state.followup_count = 0
        st.rerun()
   
    st.divider()
   
    # Info
    st.caption("💡 Tip: Clear your conversation before entering a prompt about a new claim.")
+   st.markdown("<div style='margin-bottom: 8px;'></div>", unsafe_allow_html=True)
    st.caption("📚 Referenced sources are shown at the bottom with the results of each prompt!")
+   st.markdown("<div style='margin-bottom: 8px;'></div>", unsafe_allow_html=True)
    st.caption("PLACEHOLDER - ADD LINK TO METRIC DEFINITIONS DOCUMENT")
 
 
 # Main chat interface
-#st.title("CoClaims AI") # Updated title
 #logo to match website
 st.markdown("""
 <div style="display: flex; align-items: center; gap: 24px;">
@@ -212,218 +196,115 @@ st.markdown("""
     <span style="font-size: 72px; font-weight: 700;">CoClaims AI</span>
 </div>
 """, unsafe_allow_html=True)
-st.caption("Hey there, I'm CoClaims, your personal AI engine for evaluating the claims made by public companies. Input a prompt with a question about a company claim. Then see the outputted evaluation metrics and reference sources!  **Note that nothing displayed here constitutes legal or financial advice.**") # Updated
 
-# Display chat messages
-for message in st.session_state.messages:
-   with st.chat_message(message["role"]):
-       st.markdown(message["content"])
-      
-       # Show sources if available
-       if "sources" in message and message["sources"]:
-           with st.expander("📚 View Sources"):
-               for i, source in enumerate(message["sources"], 1):
-                   st.markdown(f"""
-**Source {i}**
-- **File**: `{source.get('s3_key', '')}`
-- **Relevance Score**: {source['score']:.3f}
-- **Chunk**: {source.get('chunk_index', '')}
-- **Fact Type**: {source.get('fact_type', '—')}
-- **Filing Date**: {source.get('filing_date', '—') or '—'}
-- **Source URL**: {source.get('source_url', '—') or '—'}
-                   """)
+st.markdown("<div style='margin-bottom: 30px;'></div>", unsafe_allow_html=True)
+st.caption("Hey there, I'm CoClaims, your personal AI engine for evaluating the claims made by public companies. Input a prompt with a question about a company claim. Then see the outputted evaluation metrics and reference sources!  **Note that nothing displayed here constitutes legal or financial advice.**")
+st.markdown("<div style='margin-bottom: 30px;'></div>", unsafe_allow_html=True)
 
-# Chat input
-if prompt := st.chat_input("Ask your question here! Example: Has NVIDIA engaged in circular financing since 2025?"):
-   # Add user message to chat
-   st.session_state.messages.append({"role": "user", "content": prompt})
-  
+
+# Chat input — only show if analysis has not been run yet
+if not st.session_state.analysis_done:
+   if prompt := st.chat_input("Ask your question here! Example: Has NVIDIA engaged in circular financing since 2025?"):
+       st.session_state.messages.append({"role": "user", "content": prompt})
+       st.session_state.analysis_done = True
+       st.session_state.current_prompt = prompt
+       st.rerun()
+
+# If analysis has been run, display results
+if st.session_state.analysis_done:
+   prompt = st.session_state.current_prompt
+
    with st.chat_message("user"):
        st.markdown(prompt)
-  
-   # Get AI response
+
    with st.chat_message("assistant"):
-       with st.spinner("Thinking..."):
-           ## COMMENTED OUT SECTION TO INSERT DUMMY UI DATA (START)
-#             result = call_chat_api(prompt, top_k=top_k, temperature=temperature)
-          
-#             if "error" in result:
-#                 response = f"❌ Error: {result['error']}"
-#                 st.error(response)
-#                 st.session_state.messages.append({
-#                     "role": "assistant",
-#                     "content": response
-#                 })
-#             else:
-#                 answer = result.get("answer", "No answer generated")
-#                 sources = result.get("sources", [])
-              
-#                 st.markdown(answer)
-              
-#                 # Show sources
-#                 if sources:
-#                     with st.expander("📚 View Sources"):
-#                         for i, source in enumerate(sources, 1):
-#                             st.markdown(f"""
-# **Source {i}**
-# - **File**: `{source.get('s3_key', '')}`
-# - **Relevance Score**: {source['score']:.3f}
-# - **Chunk**: {source.get('chunk_index', '')}
-# - **Fact Type**: {source.get('fact_type', '—')}
-# - **Filing Date**: {source.get('filing_date', '—') or '—'}
-# - **Source URL**: {source.get('source_url', '—') or '—'}
-#                             """)
-              
-#                 # Add assistant message to chat
-#                 st.session_state.messages.append({
-#                     "role": "assistant",
-#                     "content": answer,
-#                     "sources": sources
-#                 })
-## COMMENTED OUT SECTION TO INSERT DUMMY UI DATA (END)
+       answer = "This is a placeholder response for demo purposes."
+       st.markdown(answer)
 
-        # START DUMMY UI INPUT 
+       st.subheader(f"Claim Analysis: {prompt}")
+       st.info("Yes, based on the available evidence it does seem like NVIDIA may have engaged in circular financing in 2025, as highlighted by [high value for metric A] and [low value for metric B]. Please see the evidence metrics returned below for more details. THIS IS AN EXAMPLE PLACEHOLDER FOR THE TEXT BASED LLM RESPONSE.")
 
-        # --- DUMMY RESPONSE TEXT ---
-            answer = "This is a placeholder response for demo purposes."
+       metrics = {
+           "Evidence Support Score (ESS)": 0.71,
+           "Evidence Contradictory Score (ECS)": 0.42,
+           "Evidence Availability Score (EAS)": 0.83,
+           "Claim Specificity Score (CSS)": 0.64,
+           "Claim Testability Score (CTS)": 0.58,
+           "Evidence Recency Score (ERS)": 0.76,
+           "Source Diversity Score (SDS)": 0.69,
+           "External Verifiability Score (EVS)": 0.72,
+           "Claim Scope Score (CScope)": 0.55,
+           "Claim Measurability Score (CMS)": 0.61,
+           "Hedging Level Score (HLS)": 0.33
+       }
 
-            st.markdown(answer)
+       overall_score = sum(metrics.values()) / len(metrics)
 
-            # --- DUMMY METRICS UI ---
-            st.subheader(f"Claim Analysis: {prompt}")
+       dashboard, chat = st.columns([3,1])
 
-            st.info("Yes, based on the available evidence it does seem like NVIDIA may have engaged in circular financing in 2025, as highlighted by [high value for metric A] and [low value for metric B]. Please see the evidence metrics returned below for more details. THIS IS AN EXAMPLE PLACEHOLDER FOR THE TEXT BASED LLM RESPONSE.")
-
-            metrics = {
-                "Evidence Support Score (ESS)": 0.71,
-                "Evidence Contradictory Score (ECS)": 0.42,
-                "Evidence Availability Score (EAS)": 0.83,
-                "Claim Specificity Score (CSS)": 0.64,
-                "Claim Testability Score (CTS)": 0.58,
-                "Evidence Recency Score (ERS)": 0.76,
-                "Source Diversity Score (SDS)": 0.69,
-                "External Verifiability Score (EVS)": 0.72,
-                "Claim Scope Score (CScope)": 0.55,
-                "Claim Measurability Score (CMS)": 0.61,
-                "Hedging Level Score (HLS)": 0.33
-            }
-
-            overall_score = sum(metrics.values()) / len(metrics)
-
-            dashboard, chat = st.columns([3,1])
-
-            with chat:
-                st.markdown("### Overall Credibility Score")
-                filled = int(overall_score * 100)
-                empty = 100 - filled
-                st.markdown(f"""
+       with chat:
+           st.markdown("### Overall Credibility Score")
+           filled = int(overall_score * 100)
+           empty = 100 - filled
+           st.markdown(f"""
 <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; padding-top:40px;">
-  <svg width="180" height="180" viewBox="0 0 36 36">
-    <path d="M18 2 a 16 16 0 1 1 0 32 a 16 16 0 1 1 0 -32" fill="none" stroke="#374151" stroke-width="3.5"/>
-    <path d="M18 2 a 16 16 0 1 1 0 32 a 16 16 0 1 1 0 -32" fill="none" stroke="#f59e0b" stroke-width="3.5"
-      stroke-dasharray="{filled:.1f} {empty:.1f}"
-      stroke-linecap="round"
-      transform="rotate(-90 18 18)"/>
-    <text x="18" y="20.5" text-anchor="middle" fill="#ffffff" font-size="7" font-weight="bold">{overall_score:.2f}</text>
-  </svg>
-  <div style="color:#9ca3af; font-size:13px; margin-top:8px;">out of 1.00</div>
+ <svg width="180" height="180" viewBox="0 0 36 36">
+   <path d="M18 2 a 16 16 0 1 1 0 32 a 16 16 0 1 1 0 -32" fill="none" stroke="#374151" stroke-width="3.5"/>
+   <path d="M18 2 a 16 16 0 1 1 0 32 a 16 16 0 1 1 0 -32" fill="none" stroke="#f59e0b" stroke-width="3.5"
+     stroke-dasharray="{filled:.1f} {empty:.1f}"
+     stroke-linecap="round"
+     transform="rotate(-90 18 18)"/>
+   <text x="18" y="20.5" text-anchor="middle" fill="#ffffff" font-size="7" font-weight="bold">{overall_score:.2f}</text>
+ </svg>
+ <div style="color:#9ca3af; font-size:13px; margin-top:8px;">out of 1.00</div>
 </div>
 """, unsafe_allow_html=True)
 
-            with dashboard:
-
-
-            # dashboard, chat = st.columns([3,1])
-
-            # with dashboard:
-
-                # st.markdown("### Evidence Metrics")
-
-                # cols = st.columns(4)
-                # i = 0
-                # for k, v in metrics.items():
-                #     cols[i].metric(k, f"{v:.2f}")
-                #     i += 1
-                #     if i == 4:
-                #         cols = st.columns(4)
-                #         i = 0
-
-                # TEST REPLACING METRIC DISLPAY WITH PROGRESS BARS UP TO 1
-
-                # st.markdown("### Evidence Metrics")
-
-                # for k, v in metrics.items():
-                #     st.markdown(f"**{k}** — {v:.2f}")
-                #     st.progress(v)
-
-                #TEST DISPLAY 2
-                st.markdown("### Evidence Metrics")
-
-                cols = st.columns(4)
-                i = 0
-                for k, v in metrics.items():
-                    with cols[i]:
-                        st.markdown(f"**{k}**")
-                        st.markdown(f"""
+       with dashboard:
+           st.markdown("### Evidence Metrics")
+           cols = st.columns(4)
+           i = 0
+           for k, v in metrics.items():
+               with cols[i]:
+                   st.markdown(f"**{k}**")
+                   st.markdown(f"""
 <div style="background:#374151; border-radius:6px; height:10px; width:100%;">
-  <div style="background:#f59e0b; width:{v*100}%; height:10px; border-radius:6px;"></div>
+ <div style="background:#f59e0b; width:{v*100}%; height:10px; border-radius:6px;"></div>
 </div>
 <div style="font-size:12px; color:#9ca3af; margin-top:2px;">{v:.2f}</div>
 """, unsafe_allow_html=True)
-                    i += 1
-                    if i == 4:
-                        cols = st.columns(4)
-                        i = 0
+               i += 1
+               if i == 4:
+                   cols = st.columns(4)
+                   i = 0
 
-                st.markdown("### Supporting vs Contradictory Evidence")
+           st.markdown("### Supporting vs Contradictory Evidence")
+           st.markdown("**Supporting:** 14 &nbsp;&nbsp;&nbsp; **Contradictory:** 6", unsafe_allow_html=True)
 
-                # evidence_chart = pd.DataFrame({
-                #     "Type": ["Supporting", "Contradictory"],
-                #     "Count": [14, 6]
-                # }).set_index("Type")
+           st.markdown("### Evidence Sources")
+           evidence_data = pd.DataFrame({
+               "Source Type": ["GitHub Repository", "Financial Filing", "Tech News Article", "Company Blog", "Research Paper", "Industry Report"],
+               "Sentiment": ["Support", "Contradict", "Neutral", "Support", "Support", "Contradict"],
+               "Evidence Strength": [3,2,1,2,3,2],
+               "Date": ["2025-11-02", "2025-10-14", "2025-09-08", "2025-08-22", "2025-07-10", "2025-05-02"]
+           })
+           st.dataframe(evidence_data, use_container_width=True)
 
-                # st.bar_chart(evidence_chart)
+   # Follow-up chat section
+   st.divider()
+   st.markdown("#### 💬 Follow-up Chat")
+   st.caption("Ask me follow ups about the results of your current prompt, or click **Clear Conversation** in the sidebar to enter a new one.")
 
-                st.markdown("**Supporting:** 14 &nbsp;&nbsp;&nbsp; **Contradictory:** 6", unsafe_allow_html=True)
+   for msg in st.session_state.followup_messages:
+       with st.chat_message(msg["role"]):
+           st.markdown(msg["content"])
 
-                st.markdown("### Evidence Sources")
-
-                evidence_data = pd.DataFrame({
-                    "Source Type": [
-                        "GitHub Repository",
-                        "Financial Filing",
-                        "Tech News Article",
-                        "Company Blog",
-                        "Research Paper",
-                        "Industry Report"
-                    ],
-                    "Sentiment": [
-                        "Support",
-                        "Contradict",
-                        "Neutral",
-                        "Support",
-                        "Support",
-                        "Contradict"
-                    ],
-                    "Evidence Strength": [3,2,1,2,3,2],
-                    "Date": [
-                        "2025-11-02",
-                        "2025-10-14",
-                        "2025-09-08",
-                        "2025-08-22",
-                        "2025-07-10",
-                        "2025-05-02"
-                ]
-            })
-
-            st.dataframe(evidence_data, use_container_width=True)
-
-        # --- STORE IN SESSION (so chat history still works) ---
-            st.session_state.messages.append({
-                "role": "assistant",
-                "content": answer,
-                "sources": []
-            })
+   if followup := st.chat_input("Ask a follow-up question about these results..."):
+       st.session_state.followup_count += 1
+       st.session_state.followup_messages.append({"role": "user", "content": followup})
+       dummy_reply = f"Dummy response #{st.session_state.followup_count}"
+       st.session_state.followup_messages.append({"role": "assistant", "content": dummy_reply})
+       st.rerun()
 
 # END DUMMY UI INPUT
 
