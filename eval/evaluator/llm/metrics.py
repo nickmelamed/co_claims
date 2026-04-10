@@ -32,6 +32,8 @@ Critical Rules:
   - ECS = 0.0–0.1
 - If evidence is weakly related:
   - Reduce ESS/ECS and confidence accordingly
+- If the evidence does not explicitly mention the same entity (e.g., Apple),
+then ESS must be ≤ 0.2.
 - Do NOT infer beyond evidence
 
 Scoring:
