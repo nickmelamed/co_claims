@@ -4,6 +4,7 @@ import asyncio
 import json
 from datetime import datetime
 from functools import partial
+import random
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.append(ROOT)
@@ -122,7 +123,7 @@ class CohereJudge:
             final_scores[m] /= weight_sum
             final_variances[m] /= max(1, len(evidence_list))
 
-        return final_scores, final_variances, responses
+        return final_scores, final_variances#, responses
 
     async def _call_with_retry(self, loop, claim, evidence):
         cached = self.cache.get(claim, evidence)
@@ -147,7 +148,7 @@ class CohereJudge:
                 )
 
                 # save to cache
-                self.cache.set(claim, evidence, response)
+                self.cache.set(claim, evidence, response.text)
                 return response
 
             except Exception as e:
@@ -263,8 +264,8 @@ if __name__ == "__main__":
 
     asyncio.run(
         evaluate_dataset(
-            dataset_path="./gold_dataset.json",
-            output_path="./gold_scores.json",
+            dataset_path="./gold/gold_dataset.json",
+            output_path="./gold/gold_scores_raw.json",
             resolver=resolver,
             aggregator=aggregator,
             type_weight_fn=get_type_weight,

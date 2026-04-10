@@ -5,6 +5,13 @@ import pickle
 import random 
 import numpy as np
 import os 
+import sys
+
+ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+sys.path.append(ROOT)
+
+from dotenv import load_dotenv
+load_dotenv()
 
 # config 
 MODES = ["well_supported", "contradictory", "unsupported", "ambiguous"]
@@ -130,7 +137,7 @@ def generate_gold_dataset(examples: List[Dict], llm) -> List[Dict]:
 
 
 # save
-def save_gold_dataset(gold_dataset: List[Dict], path="./gold_dataset.json"):
+def save_gold_dataset(gold_dataset: List[Dict], path="./gold/gold_dataset.json"):
 
     def clean_types(obj):
         if isinstance(obj, dict):
@@ -152,13 +159,13 @@ def save_gold_dataset(gold_dataset: List[Dict], path="./gold_dataset.json"):
 
 #run everything in conjunction 
 def main():
-    with open('./data/examples.pkl', 'rb') as file:
+    with open('./gold/data/examples.pkl', 'rb') as file:
         examples = pickle.load(file)
 
     # load only a subset of examples for smaller call 
-    example_subset = random.sample(examples, 20)
+    example_subset = random.sample(examples, 10)
 
-    llm = cohere.Client(os.getenv("COHERE_KEY"))
+    llm = cohere.Client(os.getenv("CO_API_KEY"))
 
     gold = generate_gold_dataset(example_subset, llm)
     save_gold_dataset(gold)
