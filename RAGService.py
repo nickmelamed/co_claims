@@ -103,6 +103,19 @@ async def chat(request: ChatRequest, authorized: bool = Depends(verify_auth)):
             url = m.get("source_url", "")
             text = m.get("text", "")
             raw_type = m.get("fact_type", "").lower()
+            news_site = m.get("news_site", "")
+
+            #  try structured domain
+            if news_site:
+                domain = news_site.lower()
+
+            # fallback to URL parsing
+            elif url:
+                domain = extract_domain(url)
+
+            # final fallback
+            else:
+                domain = "unknown"
 
             # hardcoding checks for our two kinds of data
             if raw_type in ["10-k", "10k", "10-q", "10q"]:
@@ -120,7 +133,7 @@ async def chat(request: ChatRequest, authorized: bool = Depends(verify_auth)):
                 "source_type": source_type,
                 "score": m.get("score", 0.0),
                 "url": url,
-                "domain": extract_domain(url)
+                "domain": domain
             })
 
         if not evidence_list:

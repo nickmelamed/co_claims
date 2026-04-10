@@ -44,17 +44,29 @@ class DeterministicMetrics:
     def ers(self, claim_time, evidence_times, half_life=90):
         if not evidence_times:
             return 0
-    
-        tau = half_life * 84600 # convert days to seconds 
-        
-        scores = []
-        for t in evidence_times:
-             delta = (claim_time - t).total_seconds()
-             delta = max(0, delta)
 
-             score = np.exp(-delta * np.log(2) / tau)
-             scores.append(score)
-        return np.mean(scores)
+        tau = half_life * 86400
+
+        valid_times = [t for t in evidence_times if t is not None]
+
+        scores = []
+        for t in valid_times:
+            delta = (claim_time - t).total_seconds()
+            delta = max(0, delta)
+
+            score = np.exp(-delta * np.log(2) / tau)
+            scores.append(score)
+
+        if not scores:
+            base_score = 0.5  # neutral fallback
+        else:
+            base_score = np.mean(scores)
+
+        coverage = len(valid_times) / len(evidence_times)
+
+        # combine both fallback and coverage weighting 
+        return self._clip(0.7 * base_score + 0.3 * (base_score * coverage))
+
 
     def ests(self, relevances, source_types):
         if not relevances or not source_types:
@@ -92,10 +104,12 @@ class DeterministicMetrics:
 
         diversity = len(set(valid_domains)) / len(valid_domains)
 
-        # coverage = how many domains are valid
         coverage = len(valid_domains) / len(domains)
 
-        return self._clip(diversity * coverage)
+        # small fallback: treat unknowns as weak unique sources
+        fallback_diversity = len(set(domains)) / len(domains)
+
+        return self._clip(0.8 * diversity * coverage + 0.2 * fallback_diversity)
 
     def evs(self, source_types):
         if not source_types:
