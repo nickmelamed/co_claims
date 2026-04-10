@@ -188,6 +188,12 @@ Write a concise 2-3 sentence summary explaining:
         0.3,
         150
       )
+        
+        def clean_metrics(m):
+            return {k: float(v) if hasattr(v, "item") else v for k, v in m.items()}
+        
+        metrics = clean_metrics(metrics) # cleaning outputs for ChatResponse
+        credibility = float(credibility)
 
         # structured output 
         return ChatResponse(

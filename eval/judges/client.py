@@ -28,7 +28,9 @@ class BedrockClient:
             modelId=self.model_id,
             messages=[{
                 "role": "user",
-                "content": prompt   # string not list 
+                "content": [
+                    {"text": prompt}
+                ]
             }],
             inferenceConfig={
                 "maxTokens": max_tokens,

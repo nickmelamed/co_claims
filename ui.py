@@ -52,7 +52,7 @@ def call_chat_api(query: str, top_k: int = 5, temperature: float = 0.7):
                "top_k": top_k,
                "temperature": temperature
            },
-           timeout=30
+           timeout=120
        )
       
        if response.status_code == 200:
