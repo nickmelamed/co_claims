@@ -93,7 +93,7 @@ class DeterministicMetrics:
 
         return 1 - variance
 
-    def srs(self, domains):
+    def sds(self, domains):
         if not domains:
             return 0
 
