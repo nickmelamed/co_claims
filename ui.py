@@ -11,7 +11,7 @@ AUTH_TOKEN = os.getenv("AUTH_TOKEN")
 
 # Page config
 st.set_page_config(
-   page_title="CoClaims AI", # Updated title
+   page_title="CoClaims", # Updated title
    page_icon="🤖",
    layout="wide"
 )
@@ -314,7 +314,7 @@ if st.session_state.analysis_done:
             if sources:
                 df = pd.DataFrame([
                     {
-                        "Source": s.get("s3_key"),
+                        "Source": s.get("file"),
                         "Score": round(s.get("score", 0), 3),
                         "Chunk": s.get("chunk_index"),
                         "Timestamp": s.get("timestamp")
@@ -328,7 +328,7 @@ if st.session_state.analysis_done:
                 st.markdown("#### 🔍 Inspect Evidence")
 
                 for i, s in enumerate(sources):
-                    with st.expander(f"{s.get('s3_key')} (score {s.get('score', 0):.2f})"):
+                    with st.expander(f"{s.get('file')} (score {s.get('score', 0):.2f})"):
                         st.write(s.get("text", "No text available"))
 
             else:

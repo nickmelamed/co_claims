@@ -248,6 +248,7 @@ async def chat(request: ChatRequest, authorized: bool = Depends(verify_auth)):
         sources = [
             {
                 "file": m.get("s3_key"),
+                "url": m.get("source_url"),
                 "score": m.get("score"),
                 "chunk_index": m.get("chunk_index"),
                 "timestamp": m.get("timestamp")
