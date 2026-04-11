@@ -12,7 +12,11 @@ services:
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
       - AWS_REGION=${AWS_REGION:-us-east-1}
+<<<<<<< HEAD
       - AWS_BEARER_TOKEN_BEDROCK=${AWS_BEARER_TOKEN_BEDROCK} #Patrick removed duplicate line
+=======
+      - AWS_BEARER_TOKEN_BEDROCK=${AWS_BEARER_TOKEN_BEDROCK}
+>>>>>>> 3a05f64 (removed duplicate bedrock token)
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - EMBED_MODEL=${EMBED_MODEL:-amazon.titan-embed-text-v2:0}
       - QDRANT_URL=${QDRANT_URL:-http://qdrant:6333}
