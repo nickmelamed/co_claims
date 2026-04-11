@@ -70,7 +70,7 @@ class ChatRequest(BaseModel):
    max_tokens: Optional[int] = 500
    temperature: Optional[float] = 0.7
 
-
+# Update to make follow-up convo work (start)
 class ChatResponse(BaseModel):
     query: str
     overview: str
@@ -79,6 +79,38 @@ class ChatResponse(BaseModel):
     evidence_counts: dict
     sources: list
 
+class FollowupRequest(BaseModel):
+    original_claim: str
+    overview: str
+    metrics: dict
+    credibility: float
+    followup_question: str
+
+@app.post("/followup")
+async def followup(request: FollowupRequest, authorized: bool = Depends(verify_auth)):
+    try:
+        followup_prompt = f"""
+You are a helpful assistant answering follow-up questions about a completed claim evaluation.
+
+Original claim: {request.original_claim}
+
+Prior analysis summary: {request.overview}
+
+Credibility score: {request.credibility}
+
+Metrics: {request.metrics}
+
+Follow-up question: {request.followup_question}
+
+Answer the follow-up question conversationally based on the analysis above. Be concise and helpful.
+"""
+        reply = await asyncio.to_thread(llm.chat, followup_prompt, 0.5, 300)
+        return {"reply": reply}
+
+    except Exception as e:
+        logger.error("FULL TRACEBACK:\n" + traceback.format_exc())
+        raise HTTPException(status_code=500, detail=str(e))
+# Update to make follow-up convo work (end)
 
 def parse_evidence_text(raw_text: str):
     if not raw_text:

@@ -95,6 +95,27 @@ def get_headers():
         headers["Authorization"] = f"Bearer {AUTH_TOKEN}"
     return headers
 
+# Patrick add to make follow up chat work
+def call_followup_api(original_claim: str, overview: str, metrics: dict, credibility: float, followup_question: str):
+    try:
+        response = requests.post(
+            f"{st.session_state.api_url}/followup",
+            headers=get_headers(),
+            json={
+                "original_claim": original_claim,
+                "overview": overview,
+                "metrics": metrics,
+                "credibility": credibility,
+                "followup_question": followup_question
+            },
+            timeout=60
+        )
+        if response.status_code == 200:
+            return response.json()
+        else:
+            return {"error": f"{response.status_code} - {response.text}"}
+    except Exception as e:
+        return {"error": str(e)}
 
 def call_chat_api(query: str, top_k: int = 5, temperature: float = 0.7):
     try:
@@ -362,10 +383,10 @@ if st.session_state.analysis_done:
             "content": followup
         })
 
-        # Lightweight follow-up (no metrics re-render)
+        # Update to make follow-up chat work
         with st.spinner("⏳ Running evaluation..."):
-            followup_result = call_chat_api(f"{prompt}\nFollow-up: {followup}")
-        reply = followup_result.get("overview", "No response generated.")
+            followup_result = call_followup_api(prompt, overview, metrics, credibility, followup)
+        reply = followup_result.get("reply", "No response generated.")
 
         st.session_state.followup_messages.append({
             "role": "assistant",
