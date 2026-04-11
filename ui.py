@@ -312,23 +312,24 @@ if st.session_state.analysis_done:
             st.markdown("### Evidence Sources")
 
             if sources:
-                df = pd.DataFrame([
-                    {
-                        "Source": s.get("file"),
-                        "Score": round(s.get("score", 0), 3),
-                        "Chunk": s.get("chunk_index"),
-                        "Timestamp": s.get("timestamp")
-                    }
-                    for s in sources
-                ])
 
-                st.dataframe(df, use_container_width=True)
+                # df = pd.DataFrame([
+                #     {
+                #         "Source": s.get("url"),
+                #         "Score": round(s.get("score", 0), 3),
+                #         "Chunk": s.get("chunk_index"),
+                #         "Timestamp": s.get("timestamp")
+                #     }
+                #     for s in sources
+                # ])
+
+                # st.dataframe(df, use_container_width=True)
 
                 # Expandable evidence drill-down
                 st.markdown("#### 🔍 Inspect Evidence")
 
                 for i, s in enumerate(sources):
-                    with st.expander(f"{s.get('file')} (score {s.get('score', 0):.2f})"):
+                    with st.expander(f"{s.get('url')} (score {s.get('score', 0):.2f})"):
                         st.write(s.get("text", "No text available"))
 
             else:

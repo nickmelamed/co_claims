@@ -78,6 +78,30 @@ class ChatResponse(BaseModel):
     sources: list
 
 
+def parse_evidence_text(raw_text: str):
+    if not raw_text:
+        return {"clean_text": None, "section": None, "topic": None, "sentiment": None}
+
+    parts = raw_text.split(",")
+
+    # Extract metadata safely
+    section = parts[-4] if len(parts) >= 4 else None
+    topic = parts[-3] if len(parts) >= 3 else None
+    sentiment = parts[-2] if len(parts) >= 2 else None
+
+    # 🔥 only extract quoted text if it exists
+    if '"' in raw_text:
+        clean_text = raw_text.split('"')[-2].strip()
+    else:
+        clean_text = None  
+
+    return {
+        "section": section,
+        "topic": topic,
+        "sentiment": sentiment,
+        "clean_text": clean_text
+    }
+
 def _append_ingest_timing(entry: dict) -> None:
    """Append one ingest timing entry as JSONL."""
    try:
@@ -244,19 +268,29 @@ async def chat(request: ChatRequest, authorized: bool = Depends(verify_auth)):
         support = int(metrics.get("ESS", 0) * n)
         contradict = int(metrics.get("ECS", 0) * n)
 
-        # sources
+        sources = []
+        for m in (matches or []):
+            if not isinstance(m, dict):
+                continue
+
+            parsed = parse_evidence_text(m.get("text"))
+
         sources = [
             {
                 "file": m.get("s3_key"),
                 "url": m.get("source_url"),
                 "score": m.get("score"),
-                "text": m.get("text")[:500], # put limit on text output
+                "text": parsed['clean_text'], 
                 "chunk_index": m.get("chunk_index"),
                 "timestamp": m.get("timestamp")
             }
             for m in (matches or [])
             if isinstance(m, dict)
         ]
+
+        # last check to make sure source has evidence text
+
+        sources = [s for s in sources if s.get("text")]
 
         # LLM overview 
         overview_prompt = f"""
