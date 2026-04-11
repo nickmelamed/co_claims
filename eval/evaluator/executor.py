@@ -142,10 +142,10 @@ class UnifiedExecutor:
         source_types = [e.get("source_type", "unknown") for e in evidence_list]
 
         # debugging 
-        print("\n=== METRIC INPUT DEBUG ===")
-        print("DOMAINS:", domains)
-        print("TIMESTAMPS:", timestamps)
-        print("SOURCE TYPES:", source_types)
+        # print("\n=== METRIC INPUT DEBUG ===")
+        # print("DOMAINS:", domains)
+        # print("TIMESTAMPS:", timestamps)
+        # print("SOURCE TYPES:", source_types)
 
         ests = self.det.ests(relevances, source_types)
         evs = self.det.evs(source_types)
