@@ -1,0 +1,1202 @@
+[
+  {
+    "claim": "JPMorgan Chase's acquisition of First Republic Bank positively impacted its share price, rising 2.1% on the day of the announcement.",
+    "label": "well_supported",
+    "final_score": 0.7124156288038223,
+    "metrics": {
+      "ESS": 0.03333331111112593,
+      "ECS": 0.03333331111112593,
+      "CMS": 0.8999994000004001,
+      "LCS": 0.9333327111115259,
+      "HLS": 0.0,
+      "EAS": 0.4511883639059736,
+      "ERS": 2.8185891503747817e-05,
+      "ESTS": 0.6999995333336444,
+      "EAGS": 0.0307692189349158,
+      "SRS": 0.6666666666666666,
+      "EVS": 1.0,
+      "CScope": 0.5906161091496412,
+      "claim_score": 0.8559870550653919,
+      "evidence_score": 0.4731299183678729
+    },
+    "variances": {
+      "ESS": 0.06666666666666665,
+      "ECS": 0.06666666666666665,
+      "CMS": 0.04999999999999999,
+      "LCS": 0.05833333333333333,
+      "HLS": 0.04999999999999999,
+      "claim_variance": 0.039583333333333325,
+      "evidence_variance": 0.016666666666666663
+    }
+  },
+  {
+    "claim": "UBS AG's stock price surged 5% following the acquisition of First Republic by JPMorgan Chase.",
+    "label": "contradictory",
+    "final_score": 0.6577729287341981,
+    "metrics": {
+      "ESS": 0.06666662222225186,
+      "ECS": 0.06666662222225186,
+      "CMS": 0.7999994666670224,
+      "LCS": 0.7333328444447704,
+      "HLS": 0.0,
+      "EAS": 0.4511883639059736,
+      "ERS": 2.818589107475095e-05,
+      "ESTS": 0.6999995333336444,
+      "EAGS": 0.0833332638889468,
+      "SRS": 0.6666666666666666,
+      "EVS": 1.0,
+      "CScope": 0.5906161091496412,
+      "claim_score": 0.7809871050653585,
+      "evidence_score": 0.45241596818226415
+    },
+    "variances": {
+      "ESS": 0.3,
+      "ECS": 0.3,
+      "CMS": 0.04999999999999999,
+      "LCS": 0.08333333333333331,
+      "HLS": 0.04999999999999999,
+      "claim_variance": 0.04583333333333332,
+      "evidence_variance": 0.075
+    }
+  },
+  {
+    "claim": "UBS AG's stock price increased by 5% following the acquisition of First Republic by JPMorgan Chase.",
+    "label": "unsupported",
+    "final_score": 0.6786062481786514,
+    "metrics": {
+      "ESS": 0.06666662222225186,
+      "ECS": 0.06666662222225186,
+      "CMS": 0.7999994666670224,
+      "LCS": 0.8666660888892741,
+      "HLS": 0.0,
+      "EAS": 0.4511883639059736,
+      "ERS": 2.8185891065804115e-05,
+      "ESTS": 0.6999995333336444,
+      "EAGS": 0.0833332638889468,
+      "SRS": 0.6666666666666666,
+      "EVS": 1.0,
+      "CScope": 0.5906161091496412,
+      "claim_score": 0.8143204161764844,
+      "evidence_score": 0.4524159681822631
+    },
+    "variances": {
+      "ESS": 0.3,
+      "ECS": 0.3,
+      "CMS": 0.04999999999999999,
+      "LCS": 0.06666666666666665,
+      "HLS": 0.04999999999999999,
+      "claim_variance": 0.04166666666666666,
+      "evidence_variance": 0.075
+    }
+  },
+  {
+    "claim": "UBS AG's stock performance was negatively impacted by the recent banking sector turmoil, including the seizure of First Republic and its sale to JPMorgan Chase.",
+    "label": "ambiguous",
+    "final_score": 0.6318178480028401,
+    "metrics": {
+      "ESS": 0.0499999666666889,
+      "ECS": 0.0499999666666889,
+      "CMS": 0.5999996000002668,
+      "LCS": 0.8666660888892741,
+      "HLS": 0.13333324444450373,
+      "EAS": 0.4511883639059736,
+      "ERS": 2.818588128880052e-05,
+      "ESTS": 0.6999995333336444,
+      "EAGS": 0.04090907231405804,
+      "SRS": 0.6666666666666666,
+      "EVS": 1.0,
+      "CScope": 0.5906161091496412,
+      "claim_score": 0.7309871383986696,
+      "evidence_score": 0.4665356973431243
+    },
+    "variances": {
+      "ESS": 0.13333333333333333,
+      "ECS": 0.13333333333333333,
+      "CMS": 0.13333333333333333,
+      "LCS": 0.08333333333333331,
+      "HLS": 0.08333333333333331,
+      "claim_variance": 0.07499999999999998,
+      "evidence_variance": 0.03333333333333333
+    }
+  },
+  {
+    "claim": "Cathie Wood's Ark Investment Management capitalized on Coinbase's recent share price decline by acquiring an additional $75.8 million worth of shares, signaling continued confidence in the cryptocurrency exchange despite its post-listing free-fall.",
+    "label": "well_supported",
+    "final_score": 0.7154168746127609,
+    "metrics": {
+      "ESS": 0.24999983333344447,
+      "ECS": 0.0,
+      "CMS": 0.8333327777781482,
+      "LCS": 0.9999993333337779,
+      "HLS": 0.0999999333333778,
+      "EAS": 0.6321205588285577,
+      "ERS": 0.415688919921876,
+      "ESTS": 0.699999720000112,
+      "EAGS": 0.6071422789121153,
+      "SRS": 0.6,
+      "EVS": 1.0,
+      "CScope": 0.5906161091496412,
+      "claim_score": 0.8309870717320473,
+      "evidence_score": 0.5998466774934746
+    },
+    "variances": {
+      "ESS": 0.325,
+      "ECS": 0.325,
+      "CMS": 0.04999999999999999,
+      "LCS": 0.041666666666666664,
+      "HLS": 0.08333333333333331,
+      "claim_variance": 0.04374999999999999,
+      "evidence_variance": 0.08125
+    }
+  },
+  {
+    "claim": "Cathie Wood's Ark Investment Management sold off its entire stake in Coinbase Global Inc. (NASDAQ: COIN) following the company's recent free-fall.",
+    "label": "contradictory",
+    "final_score": 0.6559769004526692,
+    "metrics": {
+      "ESS": 0.0,
+      "ECS": 0.3166664555556963,
+      "CMS": 0.7333328444447704,
+      "LCS": 0.9333327111115259,
+      "HLS": 0.0,
+      "EAS": 0.6321205588285577,
+      "ERS": 0.41568891387636914,
+      "ESTS": 0.699999720000112,
+      "EAGS": 0.0,
+      "SRS": 0.6,
+      "EVS": 1.0,
+      "CScope": 0.5906161091496412,
+      "claim_score": 0.8143204161764843,
+      "evidence_score": 0.49763338472885404
+    },
+    "variances": {
+      "ESS": 0.04999999999999999,
+      "ECS": 0.04999999999999999,
+      "CMS": 0.09166666666666666,
+      "LCS": 0.05833333333333333,
+      "HLS": 0.04999999999999999,
+      "claim_variance": 0.049999999999999996,
+      "evidence_variance": 0.012499999999999997
+    }
+  },
+  {
+    "claim": "Crypto Co's revenue is expected to increase by 20% in the next quarter due to the surge in cryptocurrency adoption.",
+    "label": "unsupported",
+    "final_score": 0.6278796624997715,
+    "metrics": {
+      "ESS": 0.03333331111112593,
+      "ECS": 0.03333331111112593,
+      "CMS": 0.7666661555558962,
+      "LCS": 0.7666661555558962,
+      "HLS": 0.23333317777788148,
+      "EAS": 0.6321205588285577,
+      "ERS": 0.41568888940709836,
+      "ESTS": 0.699999720000112,
+      "EAGS": 0.024999989583337674,
+      "SRS": 0.6,
+      "EVS": 1.0,
+      "CScope": 0.5906161091496412,
+      "claim_score": 0.722653810620888,
+      "evidence_score": 0.5331055143786549
+    },
+    "variances": {
+      "ESS": 0.09999999999999999,
+      "ECS": 0.09999999999999999,
+      "CMS": 0.09999999999999998,
+      "LCS": 0.11666666666666665,
+      "HLS": 0.11666666666666665,
+      "claim_variance": 0.08333333333333331,
+      "evidence_variance": 0.024999999999999998
+    }
+  },
+  {
+    "claim": "Cathie Wood's Ark Investment Management's increased stake in Coinbase Global Inc. indicates a bullish outlook on the company's long-term growth potential despite its recent share price decline.",
+    "label": "ambiguous",
+    "final_score": 0.6391080138249422,
+    "metrics": {
+      "ESS": 0.24999983333344447,
+      "ECS": 0.0,
+      "CMS": 0.49999966666688894,
+      "LCS": 0.8333327777781482,
+      "HLS": 0.16666655555562965,
+      "EAS": 0.6321205588285577,
+      "ERS": 0.41568885281254175,
+      "ESTS": 0.699999720000112,
+      "EAGS": 0.34459440832734684,
+      "SRS": 0.6,
+      "EVS": 1.0,
+      "CScope": 0.5906161091496412,
+      "claim_score": 0.6893204995097622,
+      "evidence_score": 0.5888955281401222
+    },
+    "variances": {
+      "ESS": 0.19166666666666665,
+      "ECS": 0.19166666666666665,
+      "CMS": 0.15000000000000002,
+      "LCS": 0.09166666666666666,
+      "HLS": 0.11666666666666665,
+      "claim_variance": 0.08958333333333333,
+      "evidence_variance": 0.04791666666666666
+    }
+  },
+  {
+    "claim": "Sony's upcoming PlayStation 5, with its enhanced technical specifications and backward compatibility, is expected to positively impact the company's gaming segment revenue.",
+    "label": "well_supported",
+    "final_score": 0.664481574318021,
+    "metrics": {
+      "ESS": 0.3999996000004001,
+      "ECS": 0.024999975000025005,
+      "CMS": 0.49999950000050003,
+      "LCS": 0.8999991000009001,
+      "HLS": 0.27499972500027503,
+      "EAS": 0.3296799539643607,
+      "ERS": 0.35,
+      "ESTS": 0.6999993000007,
+      "EAGS": 0.3999997500001563,
+      "SRS": 1.0,
+      "EVS": 1.0,
+      "CScope": 0.5906161091496412,
+      "claim_score": 0.6789037460376915,
+      "evidence_score": 0.6284261450188448
+    },
+    "variances": {
+      "ESS": 0.09999999999999998,
+      "ECS": 0.09999999999999998,
+      "CMS": 0.15000000000000002,
+      "LCS": 0.07499999999999998,
+      "HLS": 0.09999999999999998,
+      "claim_variance": 0.08124999999999999,
+      "evidence_variance": 0.024999999999999994
+    }
+  },
+  {
+    "claim": "Sony's PlayStation 5 will not support any backward compatibility with PS4 games.",
+    "label": "contradictory",
+    "final_score": 0.7431873772900391,
+    "metrics": {
+      "ESS": 0.0,
+      "ECS": 0.47499952500047504,
+      "CMS": 0.7999992000008002,
+      "LCS": 0.9999990000010001,
+      "HLS": 0.0,
+      "EAS": 0.3296799539643607,
+      "ERS": 0.35,
+      "ESTS": 0.6999993000007,
+      "EAGS": 0.0,
+      "SRS": 1.0,
+      "EVS": 1.0,
+      "CScope": 0.5906161091496412,
+      "claim_score": 0.8476535772878603,
+      "evidence_score": 0.4820218772954863
+    },
+    "variances": {
+      "ESS": 0.04999999999999999,
+      "ECS": 0.04999999999999999,
+      "CMS": 0.0875,
+      "LCS": 0.04999999999999999,
+      "HLS": 0.04999999999999999,
+      "claim_variance": 0.04687499999999999,
+      "evidence_variance": 0.012499999999999997
+    }
+  },
+  {
+    "claim": "Sony's PlayStation 5 launch is expected to boost the company's Q4 2020 gaming revenue by 20% year-over-year.",
+    "label": "unsupported",
+    "final_score": 0.7623760635062377,
+    "metrics": {
+      "ESS": 0.07499992500007502,
+      "ECS": 0.024999975000025005,
+      "CMS": 0.8499991500008501,
+      "LCS": 0.9999990000010001,
+      "HLS": 0.04999995000005001,
+      "EAS": 0.3296799539643607,
+      "ERS": 0.35,
+      "ESTS": 0.6999993000007,
+      "EAGS": 0.07499995312502931,
+      "SRS": 1.0,
+      "EVS": 1.0,
+      "CScope": 0.5906161091496412,
+      "claim_score": 0.8476535772878603,
+      "evidence_score": 0.549182279052181
+    },
+    "variances": {
+      "ESS": 0.09999999999999998,
+      "ECS": 0.09999999999999998,
+      "CMS": 0.04999999999999999,
+      "LCS": 0.04999999999999999,
+      "HLS": 0.04999999999999999,
+      "claim_variance": 0.03749999999999999,
+      "evidence_variance": 0.024999999999999994
+    }
+  },
+  {
+    "claim": "Sony's PlayStation 5 launch is expected to significantly boost the company's Q4 revenue, driven by strong pre-orders and backward compatibility with popular PS4 titles.",
+    "label": "ambiguous",
+    "final_score": 0.6407969472970538,
+    "metrics": {
+      "ESS": 0.27499972500027503,
+      "ECS": 0.024999975000025005,
+      "CMS": 0.49999950000050003,
+      "LCS": 0.7999992000008002,
+      "HLS": 0.24999975000025002,
+      "EAS": 0.3296799539643607,
+      "ERS": 0.35,
+      "ESTS": 0.6999993000007,
+      "EAGS": 0.25999982666678223,
+      "SRS": 1.0,
+      "EVS": 1.0,
+      "CScope": 0.5906161091496412,
+      "claim_score": 0.6601537647876728,
+      "evidence_score": 0.5924049035705065
+    },
+    "variances": {
+      "ESS": 0.125,
+      "ECS": 0.125,
+      "CMS": 0.17500000000000002,
+      "LCS": 0.09999999999999998,
+      "HLS": 0.125,
+      "claim_variance": 0.1,
+      "evidence_variance": 0.03125
+    }
+  },
+  {
+    "claim": "<claim>\nIntel's stock price dropped significantly due to shrinking gross margins and production delays in its next-generation chips.",
+    "label": "well_supported",
+    "final_score": 0.7173696234632487,
+    "metrics": {
+      "ESS": 0.03333331111112593,
+      "ECS": 0.03333331111112593,
+      "CMS": 0.6999995333336444,
+      "LCS": 0.9666660222226519,
+      "HLS": 0.0,
+      "EAS": 0.4511883639059736,
+      "ERS": 0.4049456271148387,
+      "ESTS": 0.6999995333336444,
+      "EAGS": 0.021739120982990877,
+      "SRS": 1.0,
+      "EVS": 1.0,
+      "CScope": 0.5906161091496412,
+      "claim_score": 0.8143204161764843,
+      "evidence_score": 0.5557849689411895
+    },
+    "variances": {
+      "ESS": 0.11666666666666665,
+      "ECS": 0.11666666666666665,
+      "CMS": 0.09999999999999998,
+      "LCS": 0.04999999999999999,
+      "HLS": 0.04999999999999999,
+      "claim_variance": 0.04999999999999999,
+      "evidence_variance": 0.029166666666666664
+    }
+  },
+  {
+    "claim": "Barclays PLC's shares rose significantly following the announcement of its next-era chip production.",
+    "label": "contradictory",
+    "final_score": 0.6729910538472057,
+    "metrics": {
+      "ESS": 0.0,
+      "ECS": 0.0,
+      "CMS": 0.49999966666688894,
+      "LCS": 0.8666660888892741,
+      "HLS": 0.0,
+      "EAS": 0.4511883639059736,
+      "ERS": 0.40494556803017423,
+      "ESTS": 0.6999995333336444,
+      "EAGS": 0.0,
+      "SRS": 1.0,
+      "EVS": 1.0,
+      "CScope": 0.5906161091496412,
+      "claim_score": 0.739320466176451,
+      "evidence_score": 0.5624420332984634
+    },
+    "variances": {
+      "ESS": 0.04999999999999999,
+      "ECS": 0.04999999999999999,
+      "CMS": 0.15000000000000002,
+      "LCS": 0.08333333333333331,
+      "HLS": 0.04999999999999999,
+      "claim_variance": 0.07083333333333333,
+      "evidence_variance": 0.012499999999999997
+    }
+  },
+  {
+    "claim": "Barclays PLC's stock price declined by 10% due to concerns over production delays in the semiconductor industry.",
+    "label": "unsupported",
+    "final_score": 0.6943658458990046,
+    "metrics": {
+      "ESS": 0.03333331111112593,
+      "ECS": 0.03333331111112593,
+      "CMS": 0.7666661555558962,
+      "LCS": 0.7333328444447704,
+      "HLS": 0.0,
+      "EAS": 0.4511883639059736,
+      "ERS": 0.40494539582180805,
+      "ESTS": 0.6999995333336444,
+      "EAGS": 0.0307692189349158,
+      "SRS": 1.0,
+      "EVS": 1.0,
+      "CScope": 0.5906161091496412,
+      "claim_score": 0.772653777287577,
+      "evidence_score": 0.5638859602513839
+    },
+    "variances": {
+      "ESS": 0.06666666666666665,
+      "ECS": 0.06666666666666665,
+      "CMS": 0.08333333333333331,
+      "LCS": 0.11666666666666665,
+      "HLS": 0.04999999999999999,
+      "claim_variance": 0.062499999999999986,
+      "evidence_variance": 0.016666666666666663
+    }
+  },
+  {
+    "claim": "Barclays PLC's stock performance is likely influenced by the broader market trends, including the decline in semiconductor stocks and the mixed performance of IPOs.",
+    "label": "ambiguous",
+    "final_score": 0.5456852438059596,
+    "metrics": {
+      "ESS": 0.06666662222225186,
+      "ECS": 0.06666662222225186,
+      "CMS": 0.3999997333335112,
+      "LCS": 0.7999994666670224,
+      "HLS": 0.5999996000002666,
+      "EAS": 0.4511883639059736,
+      "ERS": 0.40494527659532364,
+      "ESTS": 0.6999995333336444,
+      "EAGS": 0.0437499726562671,
+      "SRS": 1.0,
+      "EVS": 1.0,
+      "CScope": 0.5906161091496412,
+      "claim_score": 0.547653927287477,
+      "evidence_score": 0.5424041046700974
+    },
+    "variances": {
+      "ESS": 0.2333333333333333,
+      "ECS": 0.2333333333333333,
+      "CMS": 0.18333333333333335,
+      "LCS": 0.09999999999999998,
+      "HLS": 0.13333333333333333,
+      "claim_variance": 0.10416666666666666,
+      "evidence_variance": 0.05833333333333333
+    }
+  },
+  {
+    "claim": "MetLife's stock price is expected to rise as the broader market rallies on positive coronavirus drug development news and economic stimulus negotiations.",
+    "label": "well_supported",
+    "final_score": 0.5878460331825747,
+    "metrics": {
+      "ESS": 0.16666655555562965,
+      "ECS": 0.03333331111112593,
+      "CMS": 0.49999966666688894,
+      "LCS": 0.7999994666670224,
+      "HLS": 0.2999998000001333,
+      "EAS": 0.4511883639059736,
+      "ERS": 0.0009273957054804754,
+      "ESTS": 0.6999995333336444,
+      "EAGS": 0.17058813494815592,
+      "SRS": 0.6666666666666666,
+      "EVS": 1.0,
+      "CScope": 0.5906161091496412,
+      "claim_score": 0.6476538606208547,
+      "evidence_score": 0.48816632078544125
+    },
+    "variances": {
+      "ESS": 0.21666666666666667,
+      "ECS": 0.21666666666666667,
+      "CMS": 0.15000000000000002,
+      "LCS": 0.09999999999999998,
+      "HLS": 0.15000000000000002,
+      "claim_variance": 0.1,
+      "evidence_variance": 0.05416666666666667
+    }
+  },
+  {
+    "claim": "MetLife's stock price is expected to drop significantly due to the ongoing coronavirus stimulus negotiations and their potential impact on the insurance sector.",
+    "label": "contradictory",
+    "final_score": 0.49097614845317594,
+    "metrics": {
+      "ESS": 0.0999999333333778,
+      "ECS": 0.0999999333333778,
+      "CMS": 0.43333304444463705,
+      "LCS": 0.6999995333336444,
+      "HLS": 0.6999995333336444,
+      "EAS": 0.4511883639059736,
+      "ERS": 0.0009273953700513519,
+      "ESTS": 0.6999995333336444,
+      "EAGS": 0.09999994444447531,
+      "SRS": 0.6666666666666666,
+      "EVS": 1.0,
+      "CScope": 0.5906161091496412,
+      "claim_score": 0.5059872883985695,
+      "evidence_score": 0.46595758187751996
+    },
+    "variances": {
+      "ESS": 0.19999999999999998,
+      "ECS": 0.19999999999999998,
+      "CMS": 0.18333333333333335,
+      "LCS": 0.13333333333333333,
+      "HLS": 0.09999999999999998,
+      "claim_variance": 0.10416666666666666,
+      "evidence_variance": 0.049999999999999996
+    }
+  },
+  {
+    "claim": "MetLife's revenue is expected to grow by 15% in Q4 2023 due to increased demand for life insurance policies.",
+    "label": "unsupported",
+    "final_score": 0.6216622904478069,
+    "metrics": {
+      "ESS": 0.06666662222225186,
+      "ECS": 0.06666662222225186,
+      "CMS": 0.7999994666670224,
+      "LCS": 0.6999995333336444,
+      "HLS": 0.23333317777788148,
+      "EAS": 0.4511883639059736,
+      "ERS": 0.0009273953080829821,
+      "ESTS": 0.6999995333336444,
+      "EAGS": 0.06190473242631789,
+      "SRS": 0.6666666666666666,
+      "EVS": 1.0,
+      "CScope": 0.5906161091496412,
+      "claim_score": 0.7143204828431066,
+      "evidence_score": 0.4672319697889741
+    },
+    "variances": {
+      "ESS": 0.15,
+      "ECS": 0.15,
+      "CMS": 0.06666666666666665,
+      "LCS": 0.11666666666666665,
+      "HLS": 0.08333333333333333,
+      "claim_variance": 0.06666666666666665,
+      "evidence_variance": 0.0375
+    }
+  },
+  {
+    "claim": "MetLife's stock price is expected to reach its price target of $72.72 by the end of 2023, driven by positive market sentiment and progress in coronavirus drug development.",
+    "label": "ambiguous",
+    "final_score": 0.6033236656662769,
+    "metrics": {
+      "ESS": 0.13333324444450373,
+      "ECS": 0.0999999333333778,
+      "CMS": 0.7999994666670224,
+      "LCS": 0.6666662222225186,
+      "HLS": 0.3333331111112593,
+      "EAS": 0.4511883639059736,
+      "ERS": 0.0009273952520209526,
+      "ESTS": 0.6999995333336444,
+      "EAGS": 0.13333325925930042,
+      "SRS": 0.6666666666666666,
+      "EVS": 1.0,
+      "CScope": 0.5906161091496412,
+      "claim_score": 0.6809871717319806,
+      "evidence_score": 0.47388448889010404
+    },
+    "variances": {
+      "ESS": 0.20000000000000004,
+      "ECS": 0.20000000000000004,
+      "CMS": 0.09999999999999998,
+      "LCS": 0.15000000000000002,
+      "HLS": 0.15000000000000002,
+      "claim_variance": 0.1,
+      "evidence_variance": 0.05000000000000001
+    }
+  },
+  {
+    "claim": "The $35.3 billion acquisition of Discover Financial by Capital One has been approved by U.S. banking regulators.",
+    "label": "well_supported",
+    "final_score": 0.7376443863986175,
+    "metrics": {
+      "ESS": 0.0,
+      "ECS": 0.0,
+      "CMS": 0.8999994000004001,
+      "LCS": 0.9999993333337779,
+      "HLS": 0.0,
+      "EAS": 0.4511883639059736,
+      "ERS": 0.001427487769588103,
+      "ESTS": 0.6999995333336444,
+      "EAGS": 0.0,
+      "SRS": 1.0,
+      "EVS": 1.0,
+      "CScope": 0.5906161091496412,
+      "claim_score": 0.8726537106209548,
+      "evidence_score": 0.5126288460280555
+    },
+    "variances": {
+      "ESS": 0.04999999999999999,
+      "ECS": 0.04999999999999999,
+      "CMS": 0.08333333333333331,
+      "LCS": 0.04999999999999999,
+      "HLS": 0.04999999999999999,
+      "claim_variance": 0.04583333333333332,
+      "evidence_variance": 0.012499999999999997
+    }
+  },
+  {
+    "claim": "Capital One's acquisition of Discover Financial was rejected by U.S. banking regulators.",
+    "label": "contradictory",
+    "final_score": 0.7220193968109581,
+    "metrics": {
+      "ESS": 0.0,
+      "ECS": 0.0,
+      "CMS": 0.7999994666670224,
+      "LCS": 0.9999993333337779,
+      "HLS": 0.0,
+      "EAS": 0.4511883639059736,
+      "ERS": 0.0014274876762843775,
+      "ESTS": 0.6999995333336444,
+      "EAGS": 0.0,
+      "SRS": 1.0,
+      "EVS": 1.0,
+      "CScope": 0.5906161091496412,
+      "claim_score": 0.8476537272876103,
+      "evidence_score": 0.5126288460165375
+    },
+    "variances": {
+      "ESS": 0.04999999999999999,
+      "ECS": 0.04999999999999999,
+      "CMS": 0.09999999999999998,
+      "LCS": 0.04999999999999999,
+      "HLS": 0.04999999999999999,
+      "claim_variance": 0.04999999999999999,
+      "evidence_variance": 0.012499999999999997
+    }
+  },
+  {
+    "claim": "Capital One's acquisition of Discover Financial is expected to increase its annual revenue by 20% in 2024.",
+    "label": "unsupported",
+    "final_score": 0.7220193968076009,
+    "metrics": {
+      "ESS": 0.0,
+      "ECS": 0.0,
+      "CMS": 0.7999994666670224,
+      "LCS": 0.9999993333337779,
+      "HLS": 0.0,
+      "EAS": 0.4511883639059736,
+      "ERS": 0.001427487603763113,
+      "ESTS": 0.6999995333336444,
+      "EAGS": 0.0,
+      "SRS": 1.0,
+      "EVS": 1.0,
+      "CScope": 0.5906161091496412,
+      "claim_score": 0.8476537272876103,
+      "evidence_score": 0.512628846007585
+    },
+    "variances": {
+      "ESS": 0.04999999999999999,
+      "ECS": 0.04999999999999999,
+      "CMS": 0.075,
+      "LCS": 0.04999999999999999,
+      "HLS": 0.04999999999999999,
+      "claim_variance": 0.04375,
+      "evidence_variance": 0.012499999999999997
+    }
+  },
+  {
+    "claim": "Capital One's acquisition of Discover Financial is expected to significantly boost its market share in the credit card industry, but the impact on its earnings per share remains uncertain.",
+    "label": "ambiguous",
+    "final_score": 0.5657695009661723,
+    "metrics": {
+      "ESS": 0.0,
+      "ECS": 0.0,
+      "CMS": 0.49999966666688894,
+      "LCS": 0.9999993333337779,
+      "HLS": 0.6999995333336444,
+      "EAS": 0.4511883639059736,
+      "ERS": 0.001427487430394533,
+      "ESTS": 0.6999995333336444,
+      "EAGS": 0.0,
+      "SRS": 1.0,
+      "EVS": 1.0,
+      "CScope": 0.5906161091496412,
+      "claim_score": 0.5976538939541659,
+      "evidence_score": 0.512628845986183
+    },
+    "variances": {
+      "ESS": 0.04999999999999999,
+      "ECS": 0.04999999999999999,
+      "CMS": 0.15000000000000002,
+      "LCS": 0.04999999999999999,
+      "HLS": 0.09999999999999998,
+      "claim_variance": 0.075,
+      "evidence_variance": 0.012499999999999997
+    }
+  },
+  {
+    "claim": "Cisco's gross margin improvements were driven by productivity gains and favorable product mix, despite pricing pressures and challenging macroeconomic conditions.",
+    "label": "well_supported",
+    "final_score": 0.6090260967684127,
+    "metrics": {
+      "ESS": 0.3166664555556963,
+      "ECS": 0.06666662222225186,
+      "CMS": 0.49999966666688894,
+      "LCS": 0.8666660888892741,
+      "HLS": 0.21666652222231852,
+      "EAS": 0.6321205588285577,
+      "ERS": 0.03920457035640233,
+      "ESTS": 0.9499996200001519,
+      "EAGS": 0.3363634834711439,
+      "SRS": 0.20000000000000004,
+      "EVS": 1.0,
+      "CScope": 0.5906161091496412,
+      "claim_score": 0.6851538356208714,
+      "evidence_score": 0.532898357915954
+    },
+    "variances": {
+      "ESS": 0.13333333333333333,
+      "ECS": 0.13333333333333333,
+      "CMS": 0.15000000000000002,
+      "LCS": 0.08333333333333331,
+      "HLS": 0.09999999999999998,
+      "claim_variance": 0.08333333333333333,
+      "evidence_variance": 0.03333333333333333
+    }
+  },
+  {
+    "claim": "Cisco's total gross margin decreased significantly due to pricing erosion and unfavorable economic conditions.",
+    "label": "contradictory",
+    "final_score": 0.5772028521215022,
+    "metrics": {
+      "ESS": 0.13333324444450373,
+      "ECS": 0.06666662222225186,
+      "CMS": 0.49999966666688894,
+      "LCS": 0.7999994666670224,
+      "HLS": 0.1999998666667556,
+      "EAS": 0.6321205588285577,
+      "ERS": 0.03920455205792721,
+      "ESTS": 0.9499996200001519,
+      "EAGS": 0.12999993500003248,
+      "SRS": 0.20000000000000004,
+      "EVS": 1.0,
+      "CScope": 0.5906161091496412,
+      "claim_score": 0.6726538439541992,
+      "evidence_score": 0.48175186028880534
+    },
+    "variances": {
+      "ESS": 0.16666666666666666,
+      "ECS": 0.16666666666666666,
+      "CMS": 0.15000000000000002,
+      "LCS": 0.09999999999999998,
+      "HLS": 0.09999999999999998,
+      "claim_variance": 0.0875,
+      "evidence_variance": 0.041666666666666664
+    }
+  },
+  {
+    "claim": "Cisco's revenue from the APJC segment decreased by 5% year-over-year due to reduced demand in the region.",
+    "label": "unsupported",
+    "final_score": 0.6228719427890228,
+    "metrics": {
+      "ESS": 0.13333324444450373,
+      "ECS": 0.0999999333333778,
+      "CMS": 0.7999994666670224,
+      "LCS": 0.8333327777781482,
+      "HLS": 0.16666655555562965,
+      "EAS": 0.6321205588285577,
+      "ERS": 0.03920454529367627,
+      "ESTS": 0.9499996200001519,
+      "EAGS": 0.12727266942151388,
+      "SRS": 0.20000000000000004,
+      "EVS": 1.0,
+      "CScope": 0.5906161091496412,
+      "claim_score": 0.7643204495097955,
+      "evidence_score": 0.48142343606825
+    },
+    "variances": {
+      "ESS": 0.13333333333333333,
+      "ECS": 0.13333333333333333,
+      "CMS": 0.06666666666666665,
+      "LCS": 0.06666666666666665,
+      "HLS": 0.08333333333333333,
+      "claim_variance": 0.054166666666666655,
+      "evidence_variance": 0.03333333333333333
+    }
+  },
+  {
+    "claim": "Cisco's total gross margin increase was primarily driven by productivity improvements in the APJC segment, despite global economic challenges.",
+    "label": "ambiguous",
+    "final_score": 0.6023457738543754,
+    "metrics": {
+      "ESS": 0.3166664555556963,
+      "ECS": 0.06666662222225186,
+      "CMS": 0.49999966666688894,
+      "LCS": 0.7999994666670224,
+      "HLS": 0.1999998666667556,
+      "EAS": 0.6321205588285577,
+      "ERS": 0.039204521254329494,
+      "ESTS": 0.9499996200001519,
+      "EAGS": 0.3476188820862467,
+      "SRS": 0.20000000000000004,
+      "EVS": 1.0,
+      "CScope": 0.5906161091496412,
+      "claim_score": 0.6726538439541992,
+      "evidence_score": 0.5320377037545514
+    },
+    "variances": {
+      "ESS": 0.15,
+      "ECS": 0.15,
+      "CMS": 0.15000000000000002,
+      "LCS": 0.09999999999999998,
+      "HLS": 0.11666666666666665,
+      "claim_variance": 0.09166666666666666,
+      "evidence_variance": 0.0375
+    }
+  },
+  {
+    "claim": "The stock market experienced a downturn on Thursday, with major indices like the Nasdaq, Dow Jones, and S&P 500 all closing lower, likely influenced by disappointing corporate earnings and economic contraction signals.",
+    "label": "well_supported",
+    "final_score": 0.6460325796263335,
+    "metrics": {
+      "ESS": 0.28333314444457036,
+      "ECS": 0.03333331111112593,
+      "CMS": 0.6333329111113926,
+      "LCS": 0.9333327111115259,
+      "HLS": 0.3833330777779481,
+      "EAS": 0.4511883639059736,
+      "ERS": 1.71067887779778e-08,
+      "ESTS": 0.6999995333336444,
+      "EAGS": 0.33717931426701836,
+      "SRS": 1.0,
+      "EVS": 1.0,
+      "CScope": 0.5906161091496412,
+      "claim_score": 0.6934871633986528,
+      "evidence_score": 0.5669416066724678
+    },
+    "variances": {
+      "ESS": 0.17500000000000002,
+      "ECS": 0.17500000000000002,
+      "CMS": 0.125,
+      "LCS": 0.06666666666666665,
+      "HLS": 0.11666666666666665,
+      "claim_variance": 0.07708333333333332,
+      "evidence_variance": 0.043750000000000004
+    }
+  },
+  {
+    "claim": "Data Storage Corp's stock price increased significantly on Thursday, outperforming the broader market decline.",
+    "label": "contradictory",
+    "final_score": 0.6294682149257563,
+    "metrics": {
+      "ESS": 0.06666662222225186,
+      "ECS": 0.06666662222225186,
+      "CMS": 0.49999966666688894,
+      "LCS": 0.8666660888892741,
+      "HLS": 0.13333324444450373,
+      "EAS": 0.4511883639059736,
+      "ERS": 1.7106771541147147e-08,
+      "ESTS": 0.6999995333336444,
+      "EAGS": 0.052631551246551986,
+      "SRS": 1.0,
+      "EVS": 1.0,
+      "CScope": 0.5906161091496412,
+      "claim_score": 0.7059871550653252,
+      "evidence_score": 0.5019366480264749
+    },
+    "variances": {
+      "ESS": 0.18333333333333335,
+      "ECS": 0.18333333333333335,
+      "CMS": 0.16666666666666666,
+      "LCS": 0.08333333333333331,
+      "HLS": 0.09999999999999999,
+      "claim_variance": 0.0875,
+      "evidence_variance": 0.04583333333333334
+    }
+  },
+  {
+    "claim": "Data Storage Corp's stock price fell by 10% on Thursday due to disappointing earnings results.",
+    "label": "unsupported",
+    "final_score": 0.7048622457150455,
+    "metrics": {
+      "ESS": 0.06666662222225186,
+      "ECS": 0.06666662222225186,
+      "CMS": 0.7999994666670224,
+      "LCS": 0.9333327111115259,
+      "HLS": 0.0,
+      "EAS": 0.4511883639059736,
+      "ERS": 1.7106770445065506e-08,
+      "ESTS": 0.6999995333336444,
+      "EAGS": 0.0437499726562671,
+      "SRS": 1.0,
+      "EVS": 1.0,
+      "CScope": 0.5906161091496412,
+      "claim_score": 0.8309870717320473,
+      "evidence_score": 0.49465420235337587
+    },
+    "variances": {
+      "ESS": 0.2333333333333333,
+      "ECS": 0.2333333333333333,
+      "CMS": 0.09999999999999998,
+      "LCS": 0.04999999999999999,
+      "HLS": 0.04999999999999999,
+      "claim_variance": 0.04999999999999999,
+      "evidence_variance": 0.05833333333333333
+    }
+  },
+  {
+    "claim": "Data Storage Corp's stock performance was negatively impacted by the broader market decline, but its long-term growth prospects remain unclear.",
+    "label": "ambiguous",
+    "final_score": 0.49862586967532657,
+    "metrics": {
+      "ESS": 0.08333327777781482,
+      "ECS": 0.08333327777781482,
+      "CMS": 0.2999998000001333,
+      "LCS": 0.7999994666670224,
+      "HLS": 0.6999995333336444,
+      "EAS": 0.4511883639059736,
+      "ERS": 1.710676858124993e-08,
+      "ESTS": 0.6999995333336444,
+      "EAGS": 0.07352936851213618,
+      "SRS": 1.0,
+      "EVS": 1.0,
+      "CScope": 0.5906161091496412,
+      "claim_score": 0.49765396062078815,
+      "evidence_score": 0.5002457180995573
+    },
+    "variances": {
+      "ESS": 0.21666666666666667,
+      "ECS": 0.21666666666666667,
+      "CMS": 0.16666666666666666,
+      "LCS": 0.09999999999999998,
+      "HLS": 0.09999999999999998,
+      "claim_variance": 0.09166666666666665,
+      "evidence_variance": 0.05416666666666667
+    }
+  },
+  {
+    "claim": "Facebook's revenue growth of 33% to $28 billion in Q4 2020 demonstrates its resilience despite regulatory scrutiny and criticism.",
+    "label": "well_supported",
+    "final_score": 0.7258715802412596,
+    "metrics": {
+      "ESS": 0.28333314444457036,
+      "ECS": 0.03333331111112593,
+      "CMS": 0.8999994000004001,
+      "LCS": 0.8333327777781482,
+      "HLS": 0.0999999333333778,
+      "EAS": 0.4511883639059736,
+      "ERS": 0.5668435588549252,
+      "ESTS": 0.6999995333336444,
+      "EAGS": 0.3263156177286223,
+      "SRS": 0.6666666666666666,
+      "EVS": 1.0,
+      "CScope": 0.5906161091496412,
+      "claim_score": 0.8059870883987029,
+      "evidence_score": 0.5923457333121873
+    },
+    "variances": {
+      "ESS": 0.18333333333333335,
+      "ECS": 0.18333333333333335,
+      "CMS": 0.04999999999999999,
+      "LCS": 0.08333333333333331,
+      "HLS": 0.09999999999999998,
+      "claim_variance": 0.05833333333333332,
+      "evidence_variance": 0.04583333333333334
+    }
+  },
+  {
+    "claim": "APi Group Corp's revenue declined by 20% in the last quarter due to regulatory scrutiny and reduced customer engagement.",
+    "label": "contradictory",
+    "final_score": 0.6754715059015346,
+    "metrics": {
+      "ESS": 0.0,
+      "ECS": 0.0,
+      "CMS": 0.7999994666670224,
+      "LCS": 0.6999995333336444,
+      "HLS": 0.06666662222225186,
+      "EAS": 0.4511883639059736,
+      "ERS": 0.566843533438919,
+      "ESTS": 0.6999995333336444,
+      "EAGS": 0.0,
+      "SRS": 0.6666666666666666,
+      "EVS": 1.0,
+      "CScope": 0.5906161091496412,
+      "claim_score": 0.755987121732014,
+      "evidence_score": 0.5412788128507354
+    },
+    "variances": {
+      "ESS": 0.04999999999999999,
+      "ECS": 0.04999999999999999,
+      "CMS": 0.09999999999999998,
+      "LCS": 0.13333333333333333,
+      "HLS": 0.06666666666666665,
+      "claim_variance": 0.07499999999999998,
+      "evidence_variance": 0.012499999999999997
+    }
+  },
+  {
+    "claim": "APi Group Corp's revenue growth outpaced Facebook's 33% increase in the last quarter.",
+    "label": "unsupported",
+    "final_score": 0.7229209521378681,
+    "metrics": {
+      "ESS": 0.03333331111112593,
+      "ECS": 0.03333331111112593,
+      "CMS": 0.7333328444447704,
+      "LCS": 0.9999993333337779,
+      "HLS": 0.0,
+      "EAS": 0.4511883639059736,
+      "ERS": 0.5668434944647778,
+      "ESTS": 0.6999995333336444,
+      "EAGS": 0.0307692189349158,
+      "SRS": 0.6666666666666666,
+      "EVS": 1.0,
+      "CScope": 0.5906161091496412,
+      "claim_score": 0.8309870717320473,
+      "evidence_score": 0.5428107528142362
+    },
+    "variances": {
+      "ESS": 0.06666666666666665,
+      "ECS": 0.06666666666666665,
+      "CMS": 0.08333333333333331,
+      "LCS": 0.04999999999999999,
+      "HLS": 0.04999999999999999,
+      "claim_variance": 0.04583333333333332,
+      "evidence_variance": 0.016666666666666663
+    }
+  },
+  {
+    "claim": "APi Group Corp's revenue growth is expected to slow down due to increased regulatory scrutiny and competition from Big Tech companies investing in AI.",
+    "label": "ambiguous",
+    "final_score": 0.525692842657911,
+    "metrics": {
+      "ESS": 0.06666662222225186,
+      "ECS": 0.06666662222225186,
+      "CMS": 0.3999997333335112,
+      "LCS": 0.7333328444447704,
+      "HLS": 0.5999996000002666,
+      "EAS": 0.4511883639059736,
+      "ERS": 0.5668434443970086,
+      "ESTS": 0.6999995333336444,
+      "EAGS": 0.09090900826453795,
+      "SRS": 0.6666666666666666,
+      "EVS": 1.0,
+      "CScope": 0.5906161091496412,
+      "claim_score": 0.5309872717319141,
+      "evidence_score": 0.5168687942012393
+    },
+    "variances": {
+      "ESS": 0.31666666666666665,
+      "ECS": 0.31666666666666665,
+      "CMS": 0.20000000000000004,
+      "LCS": 0.13333333333333333,
+      "HLS": 0.11666666666666665,
+      "claim_variance": 0.11250000000000002,
+      "evidence_variance": 0.07916666666666666
+    }
+  },
+  {
+    "claim": "Chevron's stock performance is supported by its cyclical nature, benefiting from gains in the oil sector during market shifts.",
+    "label": "well_supported",
+    "final_score": 0.5971668250657969,
+    "metrics": {
+      "ESS": 0.21666652222231852,
+      "ECS": 0.0499999666666889,
+      "CMS": 0.43333304444463705,
+      "LCS": 0.7999994666670224,
+      "HLS": 0.1999998666667556,
+      "EAS": 0.6321205588285577,
+      "ERS": 0.006525729772980861,
+      "ESTS": 0.699999720000112,
+      "EAGS": 0.24117632871980668,
+      "SRS": 0.8000000000000002,
+      "EVS": 1.0,
+      "CScope": 0.5906161091496412,
+      "claim_score": 0.6559871883986362,
+      "evidence_score": 0.5383464617329575
+    },
+    "variances": {
+      "ESS": 0.21666666666666667,
+      "ECS": 0.21666666666666667,
+      "CMS": 0.18333333333333335,
+      "LCS": 0.09999999999999998,
+      "HLS": 0.13333333333333333,
+      "claim_variance": 0.10416666666666666,
+      "evidence_variance": 0.05416666666666667
+    }
+  },
+  {
+    "claim": "Chevron's stock price declined significantly during the market shift from growth to value sectors.",
+    "label": "contradictory",
+    "final_score": 0.6270188741839169,
+    "metrics": {
+      "ESS": 0.06666662222225186,
+      "ECS": 0.03333331111112593,
+      "CMS": 0.49999966666688894,
+      "LCS": 0.9333327111115259,
+      "HLS": 0.06666662222225186,
+      "EAS": 0.6321205588285577,
+      "ERS": 0.006525728702041735,
+      "ESTS": 0.699999720000112,
+      "EAGS": 0.04999997916667535,
+      "SRS": 0.8000000000000002,
+      "EVS": 1.0,
+      "CScope": 0.5906161091496412,
+      "claim_score": 0.739320466176451,
+      "evidence_score": 0.5147172821913829
+    },
+    "variances": {
+      "ESS": 0.09999999999999999,
+      "ECS": 0.09999999999999999,
+      "CMS": 0.15000000000000002,
+      "LCS": 0.06666666666666665,
+      "HLS": 0.08333333333333333,
+      "claim_variance": 0.075,
+      "evidence_variance": 0.024999999999999998
+    }
+  },
+  {
+    "claim": "Chevron's revenue growth in Q2 2024 outpaced Exxon Mobil's by 10%.",
+    "label": "unsupported",
+    "final_score": 0.680108167030032,
+    "metrics": {
+      "ESS": 0.03333331111112593,
+      "ECS": 0.03333331111112593,
+      "CMS": 0.7999994666670224,
+      "LCS": 0.9999993333337779,
+      "HLS": 0.0,
+      "EAS": 0.6321205588285577,
+      "ERS": 0.00652572852053133,
+      "ESTS": 0.699999720000112,
+      "EAGS": 0.0307692189349158,
+      "SRS": 0.8000000000000002,
+      "EVS": 1.0,
+      "CScope": 0.5906161091496412,
+      "claim_score": 0.8476537272876103,
+      "evidence_score": 0.5125626067724537
+    },
+    "variances": {
+      "ESS": 0.06666666666666665,
+      "ECS": 0.06666666666666665,
+      "CMS": 0.05833333333333333,
+      "LCS": 0.04999999999999999,
+      "HLS": 0.04999999999999999,
+      "claim_variance": 0.039583333333333325,
+      "evidence_variance": 0.016666666666666663
+    }
+  },
+  {
+    "claim": "Chevron's stock performance is expected to be volatile in the near term due to mixed market trends and shifting investor preferences.",
+    "label": "ambiguous",
+    "final_score": 0.5187030793997864,
+    "metrics": {
+      "ESS": 0.11666658888894074,
+      "ECS": 0.03333331111112593,
+      "CMS": 0.3666664222223852,
+      "LCS": 0.7999994666670224,
+      "HLS": 0.6999995333336444,
+      "EAS": 0.6321205588285577,
+      "ERS": 0.006525728110663996,
+      "ESTS": 0.699999720000112,
+      "EAGS": 0.10454540702481498,
+      "SRS": 0.8000000000000002,
+      "EVS": 1.0,
+      "CScope": 0.5906161091496412,
+      "claim_score": 0.514320616176351,
+      "evidence_score": 0.5230855426232219
+    },
+    "variances": {
+      "ESS": 0.13333333333333333,
+      "ECS": 0.13333333333333333,
+      "CMS": 0.15000000000000002,
+      "LCS": 0.09999999999999998,
+      "HLS": 0.09999999999999998,
+      "claim_variance": 0.0875,
+      "evidence_variance": 0.03333333333333333
+    }
+  }
+]

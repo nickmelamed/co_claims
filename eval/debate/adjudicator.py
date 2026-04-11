@@ -63,18 +63,39 @@ Output:
 </json>
 """
 
+ADJUDICATION_SCHEMA = {
+    "support_score": 0.0,
+    "contradiction_score": 0.0,
+    "confidence": 0.0,
+}
+
 
 class Adjudicator:
     def __init__(self, judge_model):
-        self.judge_model = judge_model  # Prometheus preferred
+        self.judge_model = judge_model  # Qwen preferred
+
+    def _apply_schema(self, result):
+      if not isinstance(result, dict):
+          result = {}
+
+      return {
+          "support_score": float(result.get("support_score", 0.0)),
+          "contradiction_score": float(result.get("contradiction_score", 0.0)),
+          "confidence": float(result.get("confidence", 0.0)),
+      }
+    
 
     def decide(self, claim, debate_output):
-        result = self.judge_model.evaluate(
-            ADJUDICATION_PROMPT.format(
-                claim=claim,
-                pro=debate_output["pro"],
-                con=debate_output["con"]
-            )
-        )
+      try:
+          result = self.judge_model.evaluate(
+              ADJUDICATION_PROMPT.format(
+                  claim=claim,
+                  pro=debate_output.get("pro", ""),
+                  con=debate_output.get("con", "")
+              )
+          )
 
-        return result
+      except Exception:
+          result = {}
+
+      return self._apply_schema(result)

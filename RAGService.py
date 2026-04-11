@@ -1,5 +1,7 @@
 import os
 import boto3
+import asyncio
+import traceback
 import json
 import time
 from typing import Optional
@@ -10,6 +12,13 @@ from RAGIngest import RAGIngestor
 from RAGSearch import RAGSearcher
 from logger_utils import get_logger
 
+from eval.config import build_pipeline
+from eval.judges.client import BedrockClient
+
+from eval.evaluator.deterministic.source_types import classify_source, extract_domain
+
+from datetime import datetime
+
 # Configuration
 AWS_REGION = os.getenv("AWS_REGION", "us-west-2")
 LLM_MODEL = os.getenv("LLM_MODEL", "us.amazon.nova-2-lite-v1:0")
@@ -18,8 +27,23 @@ INGEST_TIMING_FILE = os.getenv("INGEST_TIMING_FILE", "logs/ingest_timing.log")
 
 # Initialize
 app = FastAPI(title="RAG AI Search Service", version="1.0.0")
-bedrock = boto3.client("bedrock-runtime", region_name=AWS_REGION)
+llm = BedrockClient(LLM_MODEL)
 logger = get_logger("RAGService")
+
+
+#Pipeline 
+
+pipeline = build_pipeline()
+
+def parse_timestamp(ts):
+    if not ts:
+        return None
+    if isinstance(ts, datetime):
+        return ts
+    try:
+        return datetime.fromisoformat(ts)
+    except:
+        return None
 
 # Initialize RAG components (using default index name "knowledge")
 ingestor = RAGIngestor(aws_region=AWS_REGION, max_embed_workers=24)
@@ -46,10 +70,12 @@ class ChatRequest(BaseModel):
 
 
 class ChatResponse(BaseModel):
-   query: str
-   answer: str
-   sources: list
-   context_used: str
+    query: str
+    overview: str
+    metrics: dict
+    credibility: float
+    evidence_counts: dict
+    sources: list
 
 
 def _append_ingest_timing(entry: dict) -> None:
@@ -99,42 +125,185 @@ def ingest(request: IngestRequest, authorized: bool = Depends(verify_auth)):
 
 
 @app.post("/chat", response_model=ChatResponse)
-def chat(request: ChatRequest, authorized: bool = Depends(verify_auth)):
-   """Answer questions using RAG."""
-   try:
-       # Search for relevant context
-       matches = searcher.search_vectors(request.query, limit=request.top_k)
-       context = searcher.format_context(matches)
-      
-       # Create prompt
-       system_prompt = "You are a helpful AI assistant. Answer based on the provided context."
-       user_prompt = f"Context:\n{context}\n\nQuestion: {request.query}\n\nAnswer:"
-      
-       # Call Bedrock
-       response = bedrock.converse(
-           modelId=LLM_MODEL,
-           messages=[{"role": "user", "content": [{"text": user_prompt}]}],
-           inferenceConfig={"maxTokens": request.max_tokens, "temperature": request.temperature},
-           system=[{"text": system_prompt}]
-       )
-      
-       answer = response['output']['message']['content'][0]['text']
-       sources = [
-           {
-               "s3_key": m["s3_key"],
-               "score": m["score"],
-               "chunk_index": m["chunk_index"],
-               "filing_date": m["filing_date"],
-               "fact_type": m["fact_type"],
-               "source_url": m["source_url"],
-           }
-           for m in matches
-       ]
-      
-       return ChatResponse(query=request.query, answer=answer, sources=sources, context_used=context)
-   except Exception as e:
-       logger.error(f"Error answering question: {str(e)}")
-       raise HTTPException(status_code=500, detail=str(e))
+async def chat(request: ChatRequest, authorized: bool = Depends(verify_auth)):
+    try:
+        # retrieval 
+        matches = searcher.search_vectors(request.query, limit=request.top_k)
+
+        if not matches:
+            matches = []
+
+        matches = [
+            m for m in (matches or [])
+            if isinstance(m, dict)
+        ]
+
+        logger.info(f"MATCHES RAW: {matches}")
+
+        context = searcher.format_context(matches)
+
+        # evidence list construction 
+        evidence_list = []
+        for m in matches or []:
+            if not isinstance(m, dict):
+                continue
+
+            url = m.get("source_url", "")
+            text = m.get("text", "")
+            raw_type = m.get("fact_type", "").lower()
+            news_site = m.get("news_site", "")
+
+            timestamp = m.get("timestamp") or m.get("filing_date")
+
+
+            # hardcoding checks for our two kinds of data
+            if raw_type in ["10-k", "10k", "10-q", "10q"]:
+                source_type = "financial_filing"
+            elif raw_type in ["news", "news_article"]:
+                source_type = "news_article"
+            else:
+                # fallback to classifier
+                source_type = classify_source(url, text)
+
+            news_site = m.get("news_site", "")
+
+            if news_site:
+                domain = news_site.lower()
+
+            elif source_type == "financial_filing":
+                domain = "sec.gov"
+
+            elif url:
+                domain = extract_domain(url)
+
+            else:
+                domain = "unknown"
+
+            evidence_list.append({
+                "text": text,
+                "timestamp": parse_timestamp(timestamp),
+                "source_type": source_type,
+                "score": m.get("score", 0.0),
+                "url": url,
+                "domain": domain
+            })
+
+        if not evidence_list:
+            return {
+                "metrics": {},
+                "variances": {},
+                "credibility": 0.0,
+                "decision": {"decision": "no_evidence"},
+                "structured": {},
+                "entities": []
+            }
+        
+        # debugging domain/dates
+    #     print("\n=== RAW EVIDENCE DEBUG ===")
+    #     for e in evidence_list:
+    #         print({
+    #             "url": e.get("url"),
+    #             "domain": e.get("domain"),
+    #             "timestamp": e.get("timestamp"),
+    #             "source_type": e.get("source_type")
+    # })
+        
+        if any(m is None for m in matches):
+            logger.warning(f"Found None in matches: {matches}")
+        
+        # debugging metadata
+        #print("MATCH KEYS:", [list(m.keys()) for m in matches])
+
+        # eval pipeline 
+        result = await pipeline.run(request.query, evidence_list)
+
+        logger.info(f"PIPELINE OUTPUT TYPE: {type(result)}")
+        logger.info(f"PIPELINE OUTPUT: {result}")
+
+        # result guardrails 
+        if result is None:
+            raise ValueError("Pipeline returned None")
+        
+        if not isinstance(result, dict):
+            logger.error(f"BAD RESULT TYPE: {type(result)} | VALUE: {result}")
+            raise ValueError("Pipeline returned invalid result")
+
+        if result.get("metrics") is None:
+            logger.error(f"RESULT MISSING METRICS: {result}")
+            result["metrics"] = {}
+
+        if result.get("credibility") is None:
+            logger.error(f"RESULT MISSING CREDIBILITY: {result}")
+            result["credibility"] = 0.0
+
+        metrics = result.get("metrics", {}) or {}
+        credibility = result.get("credibility", {}) or {} 
+
+        # evidence counts
+        n = len(evidence_list)
+        support = int(metrics.get("ESS", 0) * n)
+        contradict = int(metrics.get("ECS", 0) * n)
+
+        # sources
+        sources = [
+            {
+                "file": m.get("s3_key"),
+                "score": m.get("score"),
+                "chunk_index": m.get("chunk_index"),
+                "timestamp": m.get("timestamp")
+            }
+            for m in (matches or [])
+            if isinstance(m, dict)
+        ]
+
+        # LLM overview 
+        overview_prompt = f"""
+You are summarizing a claim evaluation.
+
+Claim:
+{request.query}
+
+Metrics:
+{metrics}
+
+Credibility Score:
+{credibility}
+
+Write a concise 2-3 sentence summary explaining:
+- Whether the claim is credible
+- Whether evidence supports or contradicts it
+- Any uncertainty
+"""
+
+        overview = await asyncio.to_thread(
+        llm.chat,
+        overview_prompt,
+        0.3,
+        150
+      )
+        
+        def clean_metrics(m):
+            return {k: float(v) if hasattr(v, "item") else v for k, v in m.items()}
+        
+        metrics = clean_metrics(metrics) # cleaning outputs for ChatResponse
+        credibility = float(credibility)
+
+        # structured output 
+        return ChatResponse(
+            query=request.query,
+            overview=overview,
+            metrics=metrics,
+            credibility=credibility,
+            evidence_counts={
+                "supporting": support,
+                "contradicting": contradict
+            },
+            sources=sources
+        )
+
+    except Exception as e:
+        logger.error("FULL TRACEBACK:\n" + traceback.format_exc())
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/health")

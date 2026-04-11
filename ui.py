@@ -51,7 +51,7 @@ def call_chat_api(query: str, top_k: int = 5, temperature: float = 0.7):
                "top_k": top_k,
                "temperature": temperature
            },
-           timeout=30
+           timeout=120
        )
       
        if response.status_code == 200:
@@ -198,12 +198,108 @@ if prompt := st.chat_input("Ask a question about your documents..."):
 - **Source URL**: {source.get('source_url', '—') or '—'}
                             """)
               
-                # Add assistant message to chat
-                st.session_state.messages.append({
-                    "role": "assistant",
-                    "content": answer,
-                    "sources": sources
-                })
+        #        # Add assistant message to chat
+        #        st.session_state.messages.append({
+        #            "role": "assistant",
+        #            "content": answer,
+        #            "sources": sources
+        #        })
+        # COMMENTED OUT BLOCK REPLACED TEMPORARILY WITH DUMMY UI DATA (END)
+
+                # --- REAL API CALL ---
+        result = call_chat_api(prompt, top_k=top_k, temperature=temperature)
+
+        if "error" in result:
+            response = f"❌ Error: {result['error']}"
+            st.error(response)
+
+            st.session_state.messages.append({
+                "role": "assistant",
+                "content": response
+            })
+
+        else:
+            overview = result.get("overview", "No overview generated")
+            metrics = result.get("metrics", {})
+            credibility = result.get("credibility", 0.0)
+            evidence_counts = result.get("evidence_counts", {})
+            sources = result.get("sources", [])
+
+            # --- OVERVIEW TEXT ---
+            st.markdown(overview)
+
+            st.subheader(f"Claim Analysis: {prompt}")
+
+            dashboard, chat = st.columns([3,1])
+
+            with dashboard:
+
+                # -------------------------
+                # METRICS (DYNAMIC)
+                # -------------------------
+                st.markdown("### Evidence Metrics")
+
+                cols = st.columns(4)
+                i = 0
+
+                for k, v in metrics.items():
+                    try:
+                        cols[i].metric(k, f"{float(v):.2f}")
+                    except:
+                        cols[i].metric(k, str(v))
+
+                    i += 1
+                    if i == 4:
+                        cols = st.columns(4)
+                        i = 0
+
+                # -------------------------
+                # CREDIBILITY SCORE
+                # -------------------------
+                st.markdown("### Overall Credibility")
+                st.metric("Credibility Score", f"{credibility:.2f}")
+
+                # -------------------------
+                # EVIDENCE COUNTS (REAL)
+                # -------------------------
+                st.markdown("### Supporting vs Contradictory Evidence")
+
+                support = evidence_counts.get("supporting", 0)
+                contradict = evidence_counts.get("contradicting", 0)
+
+                evidence_chart = pd.DataFrame({
+                    "Type": ["Supporting", "Contradictory"],
+                    "Count": [support, contradict]
+                }).set_index("Type")
+
+                st.bar_chart(evidence_chart)
+
+                # -------------------------
+                # SOURCES TABLE (REAL)
+                # -------------------------
+                st.markdown("### Evidence Sources")
+
+                if sources:
+                    evidence_data = pd.DataFrame([
+                        {
+                            "Source": s.get("file"),
+                            "Relevance Score": round(s.get("score", 0), 3),
+                            "Chunk": s.get("chunk_index"),
+                            "Timestamp": s.get("timestamp")
+                        }
+                        for s in sources
+                    ])
+
+                    st.dataframe(evidence_data, use_container_width=True)
+                else:
+                    st.info("No sources returned.")
+
+            # --- STORE IN SESSION ---
+            st.session_state.messages.append({
+                "role": "assistant",
+                "content": overview,
+                "sources": sources
+            })
 
 # Footer
 st.divider()

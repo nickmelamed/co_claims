@@ -1,19 +1,41 @@
+import re
 import json 
-from judges.base_judge import BaseJudge
+from .base_judge import BaseJudge
 
 class MixtralJudge(BaseJudge):
     def __init__(self, client):
         self.client = client
 
     def evaluate(self, prompt):
-        text = self.client.chat(
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.3
+        response = self.client.chat(
+            prompt,
+            0.0,     
+            500     
         )
-        return self._parse(text)
 
-    def _parse(self, text):
+        return self._parse(response)
+
+    def _parse(self, response):
         try:
-            return json.loads(text.split("<json>")[-1])
-        except:
-            return {"error": True, "raw": text}
+            text = str(response)  # since Bedrock returns string
+
+            #print("RAW TEXT:", text[:500])
+
+            import re
+            match = re.search(r"<json>(.*?)</json>", text, re.DOTALL)
+
+            if match:
+                json_str = match.group(1)
+            else:
+                print("⚠️ NO JSON TAG FOUND")
+                return {}
+
+            parsed = json.loads(json_str)
+
+            #print("PARSED:", parsed)
+
+            return parsed if isinstance(parsed, dict) else {}
+
+        except Exception as e:
+            print("❌ PARSE FAILED:", e)
+            return {}

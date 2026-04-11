@@ -1,24 +1,29 @@
 from urllib.parse import urlparse
 
-# Type Weights
+# type weights 
 SOURCE_TYPE_WEIGHTS = {
     "peer_reviewed": 1.0,
+    "financial_filing": 0.95,
     "benchmark": 0.8,
+    "news_article": 0.7,
     "technical_blog": 0.6,
     "case_study": 0.4,
     "marketing": 0.2,
     "unknown": 0.5
 }
 
+# verifiability
 VERIFIABLE_TYPES = {
     "peer_reviewed",
     "benchmark",
     "independent_reporting",
-    "open_dataset"
+    "open_dataset",
+    "news_article",
+    "financial_filing"
 }
 
+# domain rules 
 
-# Domain Rules
 PEER_REVIEWED_DOMAINS = {
     "arxiv.org", "nature.com", "science.org", "ieee.org",
     "acm.org", "springer.com", "sciencedirect.com"
@@ -36,8 +41,18 @@ MARKETING_DOMAINS = {
     "openai.com", "google.com", "microsoft.com", "anthropic.com"
 }
 
+# NEW: News + Financial
+NEWS_DOMAINS = {
+    "reuters.com", "bloomberg.com", "wsj.com", "nytimes.com",
+    "cnbc.com", "ft.com", "forbes.com", "yahoo.com"
+}
 
-# Keyword Rules
+FINANCIAL_FILING_DOMAINS = {
+    "sec.gov"
+}
+
+# keyword rules 
+
 BENCHMARK_KEYWORDS = {
     "benchmark", "evaluation", "leaderboard", "dataset"
 }
@@ -51,8 +66,21 @@ MARKETING_KEYWORDS = {
 }
 
 
-# Domain Extraction 
+FINANCIAL_KEYWORDS = {
+    "10-k", "10q", "10-q", "8-k", "sec filing",
+    "earnings report", "annual report", "quarterly report",
+    "edgar", "form 10"
+}
+
+NEWS_KEYWORDS = {
+    "reported", "according to", "news", "press", "coverage"
+}
+
+# domain extraction 
 def extract_domain(url: str):
+    if not url:
+        return ""
+
     netloc = urlparse(url).netloc.lower()
 
     if netloc.startswith("www."):
@@ -61,13 +89,19 @@ def extract_domain(url: str):
     return netloc
 
 
-# Classification 
+# classification 
 def classify_source(url: str, text: str = ""):
     domain = extract_domain(url)
-    url_lower = url.lower()
-    text_lower = text.lower()
+    url_lower = (url or "").lower()
+    text_lower = (text or "").lower()
 
-    # For domain rules
+    # high confidence domain rules 
+    if domain in FINANCIAL_FILING_DOMAINS:
+        return "financial_filing"
+
+    if domain in NEWS_DOMAINS:
+        return "news_article"
+
     if domain in PEER_REVIEWED_DOMAINS:
         return "peer_reviewed"
 
@@ -77,11 +111,13 @@ def classify_source(url: str, text: str = ""):
     if domain in BLOG_DOMAINS:
         return "technical_blog"
 
-    if domain in MARKETING_DOMAINS:
-        # fall through — could still be case study or benchmark
-        pass
+    # url structure rules 
+    if any(x in url_lower for x in ["10-k", "10q", "10-q", "sec.gov", "edgar"]):
+        return "financial_filing"
 
-    # for URL structure 
+    if any(x in url_lower for x in ["news", "article"]):
+        return "news_article"
+
     if any(x in url_lower for x in ["arxiv.org/abs", "pdf", "paper"]):
         return "peer_reviewed"
 
@@ -94,7 +130,13 @@ def classify_source(url: str, text: str = ""):
     if any(x in url_lower for x in ["case-study", "customer"]):
         return "case_study"
 
-    # text signals 
+    # text signal rules 
+    if any(k in text_lower for k in FINANCIAL_KEYWORDS):
+        return "financial_filing"
+
+    if any(k in text_lower for k in NEWS_KEYWORDS):
+        return "news_article"
+
     if any(k in text_lower for k in BENCHMARK_KEYWORDS):
         return "benchmark"
 
@@ -104,10 +146,11 @@ def classify_source(url: str, text: str = ""):
     if any(k in text_lower for k in MARKETING_KEYWORDS):
         return "marketing"
 
-    # fallback logic 
+    # fallback domain logic 
     if domain in MARKETING_DOMAINS:
         return "marketing"
 
+    # final fallback 
     return "unknown"
 
 
