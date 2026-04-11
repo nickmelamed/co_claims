@@ -3,7 +3,6 @@ import requests
 import json
 import os
 from typing import List, Dict
-import pandas as pd # Added to display dummy data
 
 # Configuration
 API_URL = "http://rag-service:8000"
@@ -75,7 +74,7 @@ def trigger_ingestion(bucket: str = "co-claims-scraped-data", prefix: str = "mdn
            f"{st.session_state.api_url}/ingest",
            headers=get_headers(),
            json={"bucket": bucket, "prefix": prefix},
-           timeout=300
+           timeout=None
        )
        return response.json()
    except Exception as e:
@@ -150,9 +149,13 @@ for message in st.session_state.messages:
            with st.expander("📚 View Sources"):
                for i, source in enumerate(message["sources"], 1):
                    st.markdown(f"""
-                   **Source {i}**: `{source['file']}` 
-                   - Relevance Score: {source['score']:.3f} 
-                   - Chunk: {source['chunk_index']}
+**Source {i}**
+- **File**: `{source.get('s3_key', '')}`
+- **Relevance Score**: {source['score']:.3f}
+- **Chunk**: {source.get('chunk_index', '')}
+- **Fact Type**: {source.get('fact_type', '—')}
+- **Filing Date**: {source.get('filing_date', '—') or '—'}
+- **Source URL**: {source.get('source_url', '—') or '—'}
                    """)
 
 # Chat input
@@ -166,31 +169,34 @@ if prompt := st.chat_input("Ask a question about your documents..."):
    # Get AI response
    with st.chat_message("assistant"):
        with st.spinner("Thinking..."):
-           # COMMENTED OUT BLOCK REPLACED TEMPORARILY WITH DUMMY UI DATA (START)
-        #    result = call_chat_api(prompt, top_k=top_k, temperature=temperature)
+            result = call_chat_api(prompt, top_k=top_k, temperature=temperature)
           
-        #    if "error" in result:
-        #        response = f"❌ Error: {result['error']}"
-        #        st.error(response)
-        #        st.session_state.messages.append({
-        #            "role": "assistant",
-        #            "content": response
-        #        })
-        #    else:
-        #        answer = result.get("answer", "No answer generated")
-        #        sources = result.get("sources", [])
+            if "error" in result:
+                response = f"❌ Error: {result['error']}"
+                st.error(response)
+                st.session_state.messages.append({
+                    "role": "assistant",
+                    "content": response
+                })
+            else:
+                answer = result.get("answer", "No answer generated")
+                sources = result.get("sources", [])
               
-        #        st.markdown(answer)
+                st.markdown(answer)
               
-        #        # Show sources
-        #        if sources:
-        #            with st.expander("📚 View Sources"):
-        #                for i, source in enumerate(sources, 1):
-        #                    st.markdown(f"""
-        #                    **Source {i}**: `{source['file']}` 
-        #                    - Relevance Score: {source['score']:.3f} 
-        #                    - Chunk: {source['chunk_index']}
-        #                    """)
+                # Show sources
+                if sources:
+                    with st.expander("📚 View Sources"):
+                        for i, source in enumerate(sources, 1):
+                            st.markdown(f"""
+**Source {i}**
+- **File**: `{source.get('s3_key', '')}`
+- **Relevance Score**: {source['score']:.3f}
+- **Chunk**: {source.get('chunk_index', '')}
+- **Fact Type**: {source.get('fact_type', '—')}
+- **Filing Date**: {source.get('filing_date', '—') or '—'}
+- **Source URL**: {source.get('source_url', '—') or '—'}
+                            """)
               
         #        # Add assistant message to chat
         #        st.session_state.messages.append({

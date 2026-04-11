@@ -68,7 +68,8 @@ class RAGSearcher:
         )
         matches = []
         points = results.points
-       # self.logger.info(f"These are points {points}")
+        self.logger.info(f"These are points {points}")
+        print(f"These are points {points}")
 
         for point in points:
             payload = point.payload or {}
@@ -94,7 +95,9 @@ class RAGSearcher:
         context_parts = []
         for i, match in enumerate(matches, 1):
             context_parts.append(
-                f"[Source {i}] (Score: {match['score']:.3f}, File: {match['s3_key']})\n"
+                f"[Source {i}] (Score: {match['score']:.3f} | File: {match['s3_key']} | "
+                f"Type: {match['fact_type']} | Date: {match['filing_date']} | "
+                f"URL: {match['source_url']})\n"
                 f"{match['text']}\n"
             )
 
