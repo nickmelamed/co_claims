@@ -35,15 +35,17 @@ logger = get_logger("RAGService")
 
 pipeline = build_pipeline()
 
+# Patrick update function
 def parse_timestamp(ts):
-    if not ts:
-        return None
-    if isinstance(ts, datetime):
-        return ts
-    try:
-        return datetime.fromisoformat(ts)
-    except:
-        return None
+   if not ts:
+       return None
+   if isinstance(ts, datetime):
+       return ts.replace(tzinfo=timezone.utc) if ts.tzinfo is None else ts
+   try:
+       parsed = datetime.fromisoformat(ts)
+       return parsed.replace(tzinfo=timezone.utc) if parsed.tzinfo is None else parsed
+   except:
+       return None
 
 # Initialize RAG components (using default index name "knowledge")
 ingestor = RAGIngestor(aws_region=AWS_REGION, max_embed_workers=24)
