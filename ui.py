@@ -264,7 +264,7 @@ if st.session_state.analysis_done:
         with dashboard:
 
             # Split metrics into groups
-            evidence_metrics = ["ESS", "ECS", "EAS", "ERS", "ESTS", "EAGS", "SRS", "EVS"]
+            evidence_metrics = ["ESS", "ECS", "EAS", "ERS", "ESTS", "EAGS", "SDS", "EVS"]
             claim_metrics = ["CMS", "LCS", "HLS", "CScope"]
 
             def render_metric_group(title, keys):

@@ -104,7 +104,7 @@ class UnifiedExecutor:
             det_m["ERS"],
             det_m["ESTS"],
             det_m["EAGS"],
-            det_m["SRS"],
+            det_m["SDS"],
             det_m["EVS"]
         ]
 
@@ -136,7 +136,7 @@ class UnifiedExecutor:
             d if d and d != "" else "unknown"
             for d in [e.get("domain") for e in evidence_list]
         ]
-        srs = self.det.srs(domains)
+        sds = self.det.sds(domains)
 
         relevances = [e.get("relevance", 0.5) for e in evidence_list]
         source_types = [e.get("source_type", "unknown") for e in evidence_list]
@@ -161,7 +161,7 @@ class UnifiedExecutor:
             "ERS": ers,
             "ESTS": ests,
             "EAGS": eags,
-            "SRS": srs,
+            "SDS": sds,
             "EVS": evs
         }
 
