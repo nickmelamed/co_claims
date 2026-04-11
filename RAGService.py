@@ -250,6 +250,7 @@ async def chat(request: ChatRequest, authorized: bool = Depends(verify_auth)):
                 "file": m.get("s3_key"),
                 "url": m.get("source_url"),
                 "score": m.get("score"),
+                "text": m.get("text")[:500], # put limit on text output
                 "chunk_index": m.get("chunk_index"),
                 "timestamp": m.get("timestamp")
             }
