@@ -81,6 +81,7 @@ class RAGSearcher:
                     "filing_date": payload.get("filing_date", ""),
                     "fact_type": payload.get("fact_type", ""),
                     "source_url": payload.get("source_url", ""),
+                    "news_site": payload.get("news_site", "")
                 }
             )
         return matches

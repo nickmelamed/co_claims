@@ -116,17 +116,8 @@ async def chat(request: ChatRequest, authorized: bool = Depends(verify_auth)):
             raw_type = m.get("fact_type", "").lower()
             news_site = m.get("news_site", "")
 
-            #  try structured domain
-            if news_site:
-                domain = news_site.lower()
+            timestamp = m.get("timestamp") or m.get("filing_date")
 
-            # fallback to URL parsing
-            elif url:
-                domain = extract_domain(url)
-
-            # final fallback
-            else:
-                domain = "unknown"
 
             # hardcoding checks for our two kinds of data
             if raw_type in ["10-k", "10k", "10-q", "10q"]:
@@ -136,11 +127,24 @@ async def chat(request: ChatRequest, authorized: bool = Depends(verify_auth)):
             else:
                 # fallback to classifier
                 source_type = classify_source(url, text)
-            
+
+            news_site = m.get("news_site", "")
+
+            if news_site:
+                domain = news_site.lower()
+
+            elif source_type == "financial_filing":
+                domain = "sec.gov"
+
+            elif url:
+                domain = extract_domain(url)
+
+            else:
+                domain = "unknown"
 
             evidence_list.append({
                 "text": text,
-                "timestamp": parse_timestamp(m.get("timestamp")),
+                "timestamp": parse_timestamp(timestamp),
                 "source_type": source_type,
                 "score": m.get("score", 0.0),
                 "url": url,
@@ -158,14 +162,14 @@ async def chat(request: ChatRequest, authorized: bool = Depends(verify_auth)):
             }
         
         # debugging domain/dates
-        print("\n=== RAW EVIDENCE DEBUG ===")
-        for e in evidence_list:
-            print({
-                "url": e.get("url"),
-                "domain": e.get("domain"),
-                "timestamp": e.get("timestamp"),
-                "source_type": e.get("source_type")
-    })
+    #     print("\n=== RAW EVIDENCE DEBUG ===")
+    #     for e in evidence_list:
+    #         print({
+    #             "url": e.get("url"),
+    #             "domain": e.get("domain"),
+    #             "timestamp": e.get("timestamp"),
+    #             "source_type": e.get("source_type")
+    # })
         
         if any(m is None for m in matches):
             logger.warning(f"Found None in matches: {matches}")
