@@ -1,7 +1,7 @@
 import numpy as np
 
 class EvidenceTriage:
-    def __init__(self, sim, threshold=0.6, top_k=5):
+    def __init__(self, sim, threshold=0.2, top_k=5):
         self.sim = sim
         self.threshold = threshold
         self.top_k = top_k

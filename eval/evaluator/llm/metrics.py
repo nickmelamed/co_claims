@@ -1,10 +1,12 @@
 import json
-
+import numpy as np
+import re
 
 UNIFIED_PROMPT = """
 You are evaluating the credibility of a claim using provided evidence.
 
-Use ONLY the provided evidence. Do not use external knowledge.
+Use ONLY the provided evidence for ESS and ECS.
+Evaluate CMS, LCS, and HLS based on the claim itself.
 
 Claim:
 {claim}
@@ -16,35 +18,25 @@ Evaluate the following metrics (0 to 1):
 
 Definitions:
 - ESS: Degree to which evidence directly supports the claim.
-  0 = no support
-  1 = strong, direct support
-
 - ECS: Degree to which evidence contradicts the claim.
-  0 = no contradiction
-  1 = strong, direct contradiction
-
 - CMS: Degree to which the claim is specific and measurable.
-  0 = vague, not testable
-  1 = precise, quantifiable, testable
-
 - LCS: Logical consistency of the claim.
-  0 = internally contradictory or incoherent
-  1 = fully logically consistent
-
 - HLS: Degree of hedging or uncertainty in the claim.
-  0 = fully certain (no hedging)
-  1 = highly hedged (uncertain, qualified language)
 
-Instructions:
-- Treat each piece of evidence independently before aggregating.
-- Consider both supporting and contradicting evidence.
-- If evidence is insufficient or irrelevant:
-  - ESS should be low
-  - ECS should be low (unless contradiction is explicit)
-  - Confidence should be low
-- Evaluate each metric independently.
+Critical Rules:
+- ESS and ECS must NOT both be high:
+  - If evidence strongly supports → ECS ≈ 0
+  - If evidence strongly contradicts → ESS ≈ 0
+- If evidence is irrelevant:
+  - ESS = 0.0–0.1
+  - ECS = 0.0–0.1
+- If evidence is weakly related:
+  - Reduce ESS/ECS and confidence accordingly
+- If the evidence does not explicitly mention the same entity (e.g., Apple),
+then ESS must be ≤ 0.2.
+- Do NOT infer beyond evidence
 
-Scoring guidelines:
+Scoring:
 0.0 = none
 0.25 = weak
 0.5 = moderate
@@ -52,9 +44,9 @@ Scoring guidelines:
 1.0 = definitive
 
 Confidence reflects:
-- amount of evidence
-- agreement across evidence
-- clarity of support or contradiction
+- evidence quality
+- clarity of signal
+- ambiguity
 
 ---
 
@@ -140,48 +132,61 @@ Evidence: "The algorithm increases speed by 50%."
 
 ---
 
-Now evaluate:
+Now evaluate. Output ONLY valid JSON inside <json>...</json> tags. Do not include any extra text. 
 
 <json>
+{{
+  "ESS": {{"score": float, "confidence": float}},
+  "ECS": {{"score": float, "confidence": float}},
+  "CMS": {{"score": float, "confidence": float}},
+  "LCS": {{"score": float, "confidence": float}},
+  "HLS": {{"score": float, "confidence": float}}
+}}
+</json>
+
 """
+
+METRICS = ["ESS", "ECS", "CMS", "LCS", "HLS"]
+
+DEFAULT_METRIC = {
+    "score": 0.0,
+    "confidence": 0.0
+}
+
+DEFAULT_SCHEMA = {
+    m: DEFAULT_METRIC.copy() for m in METRICS
+}
 
 
 def extract_json(text):
     try:
-        if "<json>" in text:
-            text = text.split("<json>")[-1]
+        # Extract between <json>...</json>
+        match = re.search(r"<json>(.*?)</json>", text, re.DOTALL)
+        if match:
+            text = match.group(1)
+        else:
+            # fallback: try raw text
+            text = text.strip()
 
-        parsed = json.loads(text.strip())
+        return json.loads(text)
 
-        # validate structure
-        if not isinstance(parsed, dict):
-            return None
-
-        return parsed
-
-    except Exception:
+    except Exception as e:
+        print("JSON PARSE ERROR:", e)
+        #print("RAW TEXT:", text[:500])
         return None
 
 
 class UnifiedLLMJudge:
     def __init__(self, ensemble):
         self.ensemble = ensemble
+        self.metrics = ["ESS", "ECS", "CMS", "LCS", "HLS"]
 
-    def evaluate_single(self, claim, evidence_text, field):
-        prompt = UNIFIED_PROMPT.format(
-            claim=claim,
-            evidence=evidence_text
-        )
+    async def evaluate(self, claim, evidence_list, relevances):
+        final_scores = {m: 0.0 for m in self.metrics}
+        final_weights = {m: 0.0 for m in self.metrics}
+        final_variances = {m: 0.0 for m in self.metrics}
 
-        return self.ensemble.evaluate(prompt, field=field)
-
-    def evaluate(self, claim, evidence_list, relevances):
-        metrics = ["ESS", "ECS", "CMS", "LCS", "HLS"]
-
-        final_scores = {m: 0.0 for m in metrics}
-        final_variances = {m: 0.0 for m in metrics}
-
-        weight_sum = sum(relevances) + 1e-6
+        per_evidence_scores = []
 
         for e, r in zip(evidence_list, relevances):
             prompt = UNIFIED_PROMPT.format(
@@ -189,15 +194,56 @@ class UnifiedLLMJudge:
                 evidence=e["text"]
             )
 
-            scores, variances, raw = self.ensemble.evaluate(prompt)
+            try:
+                scores, variances, raw = await self.ensemble.evaluate_async(prompt)
+            except Exception as e:
+                scores = {m: 0.0 for m in self.metrics}
+                variances = {m: 1.0 for m in self.metrics}
+                raw = []
 
-            for m in metrics:
-                final_scores[m] += scores.get(m, 0.0) * r
-                final_variances[m] += variances.get(m, 0.0)
+                # debugging 
+                print("🚨 LLM CALL FAILED:", str(e), flush=True)
+
+            per_evidence_scores.append({
+                m: {
+                    "score": scores[m],
+                    "confidence": np.mean([
+                        o[m]["confidence"] for o in raw
+                    ]) if raw else 0.0
+                }
+                for m in self.metrics
+            })
+
+            # confidence-weighted aggregation
+            for m in self.metrics:
+                s = scores[m]
+                c = max(0.3, per_evidence_scores[-1][m]["confidence"])
+
+                weight = max(c, 0.2) * max(r, 0.2)
+
+                final_scores[m] += s * weight
+                final_weights[m] += weight
+
+                # variance accumulation (confidence-weighted)
+                final_variances[m] += variances[m] * weight
 
         # normalize
-        for m in metrics:
-            final_scores[m] /= weight_sum
-            final_variances[m] /= max(1, len(evidence_list))
+        for m in self.metrics:
+          if final_weights[m] > 1e-6:   # want a little over zero for stability
+              final_scores[m] /= final_weights[m]
+              final_variances[m] /= final_weights[m]
+          else:
+              # fallback to unweighted mean if weights are unusable
+              vals = [
+                  o[m]["score"] for o in raw
+                  if isinstance(o.get(m), dict)
+              ]
 
-        return final_scores, final_variances, raw
+              if vals:
+                  final_scores[m] = float(np.mean(vals))
+              else:
+                  final_scores[m] = 0.0
+
+              final_variances[m] = 1.0
+
+        return final_scores, final_variances, per_evidence_scores

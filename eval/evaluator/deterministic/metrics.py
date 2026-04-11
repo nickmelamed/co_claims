@@ -44,27 +44,45 @@ class DeterministicMetrics:
     def ers(self, claim_time, evidence_times, half_life=90):
         if not evidence_times:
             return 0
-    
-        tau = half_life * 84600 # convert days to seconds 
-        
-        scores = []
-        for t in evidence_times:
-             delta = (claim_time - t).total_seconds()
-             delta = max(0, delta)
 
-             score = np.exp(-delta * np.log(2) / tau)
-             scores.append(score)
-        return np.mean(scores)
+        tau = half_life * 86400
+
+        valid_times = [t for t in evidence_times if t is not None]
+
+        scores = []
+        for t in valid_times:
+            delta = (claim_time - t).total_seconds()
+            delta = max(0, delta)
+
+            score = np.exp(-delta * np.log(2) / tau)
+            scores.append(score)
+
+        if not scores:
+            base_score = 0.5  # neutral fallback
+        else:
+            base_score = np.mean(scores)
+
+        coverage = len(valid_times) / len(evidence_times)
+
+        # combine both fallback and coverage weighting 
+        return self._clip(0.7 * base_score + 0.3 * (base_score * coverage))
+
 
     def ests(self, relevances, source_types):
-        if not source_types:
-             return 0
+        if not relevances or not source_types:
+            return 0
 
         weights = [self.type_weight_fn(t) for t in source_types]
 
+        # base score
         num = sum(r * w for r, w in zip(relevances, weights))
         denom = sum(relevances) + self.EPS
-        return self._clip(num / denom)
+        base_score = num / denom
+
+        # coverage = how many sources are meaningfully typed
+        coverage = sum(1 for t in source_types if t != "unknown") / len(source_types)
+
+        return self._clip(base_score * coverage)
 
     def eags(self, supports):
         if not supports:
@@ -76,14 +94,33 @@ class DeterministicMetrics:
         return 1 - variance
 
     def srs(self, domains):
-            if not domains:
-                return 0
+        if not domains:
+            return 0
 
-            return len(set(domains)) / len(domains)
+        valid_domains = [d for d in domains if d and d != "unknown"]
+
+        if not valid_domains:
+            return 0
+
+        diversity = len(set(valid_domains)) / len(valid_domains)
+
+        coverage = len(valid_domains) / len(domains)
+
+        # small fallback: treat unknowns as weak unique sources
+        fallback_diversity = len(set(domains)) / len(domains)
+
+        return self._clip(0.8 * diversity * coverage + 0.2 * fallback_diversity)
 
     def evs(self, source_types):
         if not source_types:
             return 0
 
         flags = [self.verifiable_fn(s) for s in source_types]
-        return sum(flags) / len(flags)
+
+        # base score
+        base_score = sum(flags) / len(flags)
+
+        # coverage = how many sources are classified
+        coverage = sum(1 for s in source_types if s != "unknown") / len(source_types)
+
+        return self._clip(base_score * coverage)

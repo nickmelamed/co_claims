@@ -4,7 +4,11 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY RAGService.py RAGSearch.py RAGIngest.py logger_utils.py ./
+COPY . /app
+
+RUN python -m spacy download en_core_web_sm
+
+ENV PYTHONPATH=/app
 
 EXPOSE 8000
 CMD ["uvicorn", "RAGService:app", "--host", "0.0.0.0", "--port", "8000"]
