@@ -169,6 +169,9 @@ async def chat(request: ChatRequest, authorized: bool = Depends(verify_auth)):
         
         if any(m is None for m in matches):
             logger.warning(f"Found None in matches: {matches}")
+        
+        # debugging metadata
+        print("MATCH KEYS:", [list(m.keys()) for m in matches])
 
         # eval pipeline 
         result = await pipeline.run(request.query, evidence_list)
