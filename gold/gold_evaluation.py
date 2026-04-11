@@ -4,7 +4,8 @@ import asyncio
 import json
 from datetime import datetime
 from functools import partial
-import random
+import hashlib
+from pathlib import Path
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.append(ROOT)
@@ -22,14 +23,12 @@ from eval.evaluator.deterministic.source_types import get_type_weight, is_verifi
 from eval.structuring.entity_resolver import EntityResolver
 from eval.evaluator.deterministic.extractor import FeatureExtractor
 
-import hashlib
-from pathlib import Path
-
 # config
 MAX_EVIDENCE = 3
 MAX_CHARS = 300
 CONCURRENCY_LIMIT = 3
 RETRIES = 3
+
 
 # cache 
 class LLMCache:
@@ -63,19 +62,13 @@ class LLMCache:
 
 # cohere judge 
 class CohereJudge:
-    def __init__(self, api_key, model="command-a-03-2025", cache_path="./gold/cache.json"):
+    def __init__(self, api_key, model="command-a-03-2025", cache_path="./gold/llm_cache.json"):
         if not api_key:
             raise ValueError("CO_API_KEY not set")
 
         self.client = cohere.Client(api_key)
         self.model = model
-        self.cache_path = cache_path
-
-        try:
-            with open(self.cache_path, "r") as f:
-                self.cache = json.load(f)
-        except:
-            self.cache = {}
+        self.cache = LLMCache(cache_path)
 
     async def evaluate(self, claim, evidence_list, relevances):
         loop = asyncio.get_event_loop()
@@ -84,8 +77,9 @@ class CohereJudge:
 
         final_scores = {m: 0.0 for m in metrics}
         final_variances = {m: 0.0 for m in metrics}
+        per_evidence_scores = []
 
-        # reduce evidence count
+        # top-k evidence
         evidence_list = sorted(
             evidence_list,
             key=lambda x: x.get("relevance", 0.5),
@@ -99,89 +93,60 @@ class CohereJudge:
             weight_sum = len(evidence_list) or 1
             relevances = [1.0] * len(evidence_list)
 
-        # parallelize per-evidence calls
         async def eval_single(e):
             evidence_text = e["text"][:MAX_CHARS]
 
-            return await self._call_with_retry(
-                loop,
-                claim,
-                evidence_text
+            cached = self.cache.get(claim, evidence_text)
+            if cached:
+                return cached
+
+            prompt = UNIFIED_PROMPT.format(
+                claim=claim,
+                evidence=evidence_text
             )
+
+            for i in range(RETRIES):
+                try:
+                    response = await loop.run_in_executor(
+                        None,
+                        partial(
+                            self.client.chat,
+                            model=self.model,
+                            message=prompt,
+                            temperature=0.0
+                        )
+                    )
+
+                    self.cache.set(claim, evidence_text, response.text)
+                    return response.text
+
+                except Exception as err:
+                    if i == RETRIES - 1:
+                        raise err
+                    await asyncio.sleep(2 ** i)
 
         tasks = [eval_single(e) for e in evidence_list]
         responses = await asyncio.gather(*tasks)
 
-        for e, r, response in zip(evidence_list, relevances, responses):
-
-            key = self.cache._key(claim, e['text'])
-
-            if key in self.cache:
-                raw_text = self.cache[key]
-            else:
-                prompt = UNIFIED_PROMPT.format(
-                    claim=claim,
-                    evidence=e["text"][:1000]
-                )
-
-                response = self.client.chat(
-                    model=self.model,
-                    message=prompt,
-                    temperature=0.0
-                )
-
-                raw_text = response.text
-
-                self.cache[key] = raw_text
-
+        for e, r, raw_text in zip(evidence_list, relevances, responses):
             parsed = self._parse(raw_text)
             if not parsed:
                 continue
+
+            per_evidence_scores.append(parsed)
 
             for m in metrics:
                 score = parsed.get(m, {}).get("score", 0.0)
                 confidence = parsed.get(m, {}).get("confidence", 0.0)
 
                 final_scores[m] += score * r
-                final_variances[m] += (1 - confidence)
+                final_variances[m] += (1 - confidence) * r
 
-        # normalize
         for m in metrics:
             final_scores[m] /= weight_sum
             final_variances[m] /= max(1, len(evidence_list))
 
-        return final_scores, final_variances#, responses
-
-    async def _call_with_retry(self, loop, claim, evidence):
-        cached = self.cache.get(claim, evidence)
-        if cached:
-            return cached
-
-        prompt = UNIFIED_PROMPT.format(
-            claim=claim,
-            evidence=evidence
-        )
-
-        for i in range(RETRIES):
-            try:
-                response = await loop.run_in_executor(
-                    None,
-                    partial(
-                        self.client.chat,
-                        model=self.model,
-                        message=prompt,
-                        temperature=0.0
-                    )
-                )
-
-                # save to cache
-                self.cache.set(claim, evidence, response.text)
-                return response
-
-            except Exception as e:
-                if i == RETRIES - 1:
-                    raise e
-                await asyncio.sleep(2 ** i)
+        return final_scores, final_variances, per_evidence_scores
 
     def _parse(self, text):
         try:
@@ -197,30 +162,54 @@ class CohereJudge:
 
 
 # helpers
+
 def parse_time_safe(date_str):
-    if not date_str or date_str != date_str:
-        return datetime.now()
+    if not date_str:
+        return None
     try:
         return datetime.fromisoformat(date_str)
     except:
-        return datetime.now()
+        return None
 
 
 def normalize_evidence(evidence_list):
     normalized = []
+
     for e in evidence_list:
+        url = e.get("url", "")
+        raw_type = (e.get("source_type") or "").lower()
+
+        domain = e.get("domain")
+        if not domain or domain == "unknown":
+            if url:
+                domain = extract_domain(url)
+            else:
+                domain = "unknown"
+
+        # source type normalization
+        if raw_type in ["10-k", "10k", "10-q", "10q"]:
+            source_type = "financial_filing"
+        elif raw_type in ["news", "news_article"]:
+            source_type = "news_article"
+        else:
+            source_type = raw_type or "unknown"
+
+        relevance = e.get("relevance")
+        if relevance is None:
+            relevance = e.get("score", 0.5)
+
         normalized.append({
             "text": e.get("text", ""),
-            "timestamp": parse_time_safe(e.get("date")),
-            "domain": extract_domain(e.get("url")),
-            "source_type": e.get("source_type", "unknown"),
-            "relevance": e.get("relevance", 0.5),
-            "support_score": e.get("support_score", 0.5)
+            "timestamp": parse_time_safe(e.get("timestamp") or e.get("date")),
+            "domain": domain,
+            "source_type": source_type,
+            "relevance": relevance
         })
+
     return normalized
 
 
-# main evaluation 
+# main evaluation
 async def evaluate_dataset(
     dataset_path,
     output_path,
@@ -283,7 +272,7 @@ async def evaluate_dataset(
     llm_judge.cache.save()
 
 
-# entry 
+# entry
 if __name__ == "__main__":
     extractor = FeatureExtractor()
     aggregator = Aggregator()
