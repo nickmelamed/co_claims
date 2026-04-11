@@ -203,40 +203,46 @@ if not st.session_state.analysis_done:
         st.rerun()
 
 
+# analysis + dashboard
 if st.session_state.analysis_done:
-    prompt = st.session_state.current_prompt
 
-    with st.chat_message("user"):
-        st.markdown(prompt)
-
-    with st.chat_message("assistant"):
+    # Run analysis only once
+    if "analysis_result" not in st.session_state:
         with st.spinner("Running evaluation..."):
-
-            result = call_chat_api(prompt)
+            result = call_chat_api(st.session_state.current_prompt)
 
             if "error" in result:
                 st.error(result["error"])
                 st.stop()
 
-            # mapping to RAG outputs
-            overview = result.get("overview", "No overview generated")
-            metrics = result.get("metrics", {})
-            credibility = result.get("credibility", 0.0)
-            evidence_counts = result.get("evidence_counts", {})
-            sources = result.get("sources", [])
+            st.session_state.analysis_result = result
 
-            st.markdown(overview)
+    result = st.session_state.analysis_result
+    prompt = st.session_state.current_prompt
 
-            st.subheader(f"Claim Analysis: {prompt}")
+    overview = result.get("overview", "")
+    metrics = result.get("metrics", {})
+    credibility = result.get("credibility", 0.0)
+    evidence_counts = result.get("evidence_counts", {})
+    sources = result.get("sources", [])
 
-            dashboard, chat = st.columns([3,1])
+    # main chat output 
+    with st.chat_message("user"):
+        st.markdown(prompt)
 
-            # Right Panel (Credibility)
-            with chat:
-                filled = int(credibility * 100)
-                empty = 100 - filled
+    with st.chat_message("assistant"):
 
-                st.markdown(f"""
+        st.markdown(overview)
+        st.subheader(f"Claim Analysis: {prompt}")
+
+        dashboard, chat = st.columns([3,1])
+
+        # credibility circle 
+        with chat:
+            filled = int(credibility * 100)
+            empty = 100 - filled
+
+            st.markdown(f"""
 <div style="display:flex; flex-direction:column; align-items:center;">
  <svg width="180" height="180" viewBox="0 0 36 36">
    <path d="M18 2 a 16 16 0 1 1 0 32 a 16 16 0 1 1 0 -32"
@@ -254,18 +260,25 @@ if st.session_state.analysis_done:
 </div>
 """, unsafe_allow_html=True)
 
-            # Left Panel (Dashboard)
-            with dashboard:
+        # metrics dashboard
+        with dashboard:
 
-                st.markdown("### Evidence Metrics")
+            # Split metrics into groups
+            evidence_metrics = ["ESS", "ECS", "EAS", "ERS", "ESTS", "EAGS", "SRS", "EVS"]
+            claim_metrics = ["CMS", "LCS", "HLS", "CScope"]
 
+            def render_metric_group(title, keys):
+                st.markdown(f"### {title}")
                 cols = st.columns(4)
                 i = 0
 
-                for k, v in metrics.items():
-                    with cols[i]:
-                        val = float(v) if isinstance(v, (int, float)) else 0
+                for k in keys:
+                    if k not in metrics:
+                        continue
 
+                    val = float(metrics[k]) if isinstance(metrics[k], (int, float)) else 0
+
+                    with cols[i]:
                         st.markdown(f"**{k}**")
                         st.markdown(f"""
 <div style="background:#374151; border-radius:6px;">
@@ -279,130 +292,74 @@ if st.session_state.analysis_done:
                         cols = st.columns(4)
                         i = 0
 
-                # Evidence Counts
-                st.markdown("### Supporting vs Contradictory Evidence")
+            render_metric_group("Evidence Quality", evidence_metrics)
+            render_metric_group("Claim Quality", claim_metrics)
 
-                support = evidence_counts.get("supporting", 0)
-                contradict = evidence_counts.get("contradicting", 0)
-
-                st.markdown(f"**Supporting:** {support} &nbsp;&nbsp; **Contradictory:** {contradict}", unsafe_allow_html=True)
-
-                # Sources Table
-                st.markdown("### Evidence Sources")
-
-                if sources:
-                    df = pd.DataFrame([
-                        {
-                            "File": s.get("s3_key"),
-                            "Score": round(s.get("score", 0), 3),
-                            "Chunk": s.get("chunk_index"),
-                            "Timestamp": s.get("timestamp")
-                        }
-                        for s in sources
-                    ])
-
-                    st.dataframe(df, use_container_width=True)
-                else:
-                    st.info("No sources returned.")
-
-   # Follow-up chat section
-    st.divider()
-    st.markdown("#### 💬 Follow-up Chat")
-    st.caption("Ask me follow ups about the results of your current prompt, or click **Clear Conversation** in the sidebar to enter a new one.")
-
-    for msg in st.session_state.followup_messages:
-        with st.chat_message(msg["role"]):
-           st.markdown(msg["content"])
-
-    if followup := st.chat_input("Ask a follow-up question about these results..."):
-       st.session_state.followup_count += 1
-       st.session_state.followup_messages.append({"role": "user", "content": followup})
-       dummy_reply = f"Dummy response #{st.session_state.followup_count}"
-       st.session_state.followup_messages.append({"role": "assistant", "content": dummy_reply})
-       st.rerun()
-
-    else:
-        overview = result.get("overview", "No overview generated")
-        metrics = result.get("metrics", {})
-        credibility = result.get("credibility", 0.0)
-        evidence_counts = result.get("evidence_counts", {})
-        sources = result.get("sources", [])
-
-        # --- OVERVIEW TEXT ---
-        st.markdown(overview)
-
-        st.subheader(f"Claim Analysis: {prompt}")
-
-        dashboard, chat = st.columns([3,1])
-
-        with dashboard:
-
-            # -------------------------
-            # METRICS (DYNAMIC)
-            # -------------------------
-            st.markdown("### Evidence Metrics")
-
-            cols = st.columns(4)
-            i = 0
-
-            for k, v in metrics.items():
-                try:
-                    cols[i].metric(k, f"{float(v):.2f}")
-                except:
-                    cols[i].metric(k, str(v))
-
-                i += 1
-                if i == 4:
-                    cols = st.columns(4)
-                    i = 0
-
-            # -------------------------
-            # CREDIBILITY SCORE
-            # -------------------------
-            st.markdown("### Overall Credibility")
-            st.metric("Credibility Score", f"{credibility:.2f}")
-
-            # -------------------------
-            # EVIDENCE COUNTS (REAL)
-            # -------------------------
+            # evidence counts
             st.markdown("### Supporting vs Contradictory Evidence")
 
             support = evidence_counts.get("supporting", 0)
             contradict = evidence_counts.get("contradicting", 0)
 
-            evidence_chart = pd.DataFrame({
+            chart_df = pd.DataFrame({
                 "Type": ["Supporting", "Contradictory"],
                 "Count": [support, contradict]
             }).set_index("Type")
 
-            st.bar_chart(evidence_chart)
+            st.bar_chart(chart_df)
 
-            # -------------------------
-            # SOURCES TABLE (REAL)
-            # -------------------------
+            # sources
             st.markdown("### Evidence Sources")
 
             if sources:
-                evidence_data = pd.DataFrame([
+                df = pd.DataFrame([
                     {
-                        "Source": s.get("file"),
-                        "Relevance Score": round(s.get("score", 0), 3),
+                        "Source": s.get("s3_key"),
+                        "Score": round(s.get("score", 0), 3),
                         "Chunk": s.get("chunk_index"),
                         "Timestamp": s.get("timestamp")
                     }
                     for s in sources
                 ])
 
-                st.dataframe(evidence_data, use_container_width=True)
+                st.dataframe(df, use_container_width=True)
+
+                # Expandable evidence drill-down
+                st.markdown("#### 🔍 Inspect Evidence")
+
+                for i, s in enumerate(sources):
+                    with st.expander(f"{s.get('s3_key')} (score {s.get('score', 0):.2f})"):
+                        st.write(s.get("text", "No text available"))
+
             else:
                 st.info("No sources returned.")
 
-        # --- STORE IN SESSION ---
-        st.session_state.messages.append({
-            "role": "assistant",
-            "content": overview,
-            "sources": sources
+    # follow up chat without 
+    st.divider()
+    st.markdown("#### 💬 Follow-up Chat")
+    st.caption("Ask follow-ups about the analysis above.")
+
+    for msg in st.session_state.followup_messages:
+        with st.chat_message(msg["role"]):
+            st.markdown(msg["content"])
+
+    if followup := st.chat_input("Ask a follow-up question..."):
+
+        st.session_state.followup_messages.append({
+            "role": "user",
+            "content": followup
         })
+
+        # Lightweight follow-up (no metrics re-render)
+        followup_result = call_chat_api(f"{prompt}\nFollow-up: {followup}")
+        reply = followup_result.get("overview", "No response generated.")
+
+        st.session_state.followup_messages.append({
+            "role": "assistant",
+            "content": reply
+        })
+
+        st.rerun()
 
 # Footer
 st.divider()
