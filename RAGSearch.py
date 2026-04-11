@@ -74,10 +74,13 @@ class RAGSearcher:
             payload = point.payload or {}
             matches.append(
                 {
-                    "text": payload["text"],
+                    "text": payload.get("text", ""),
                     "score": point.score,
-                    "s3_key": payload["s3_key"],
-                    "chunk_index": payload['chunk_index'],
+                    "s3_key": payload.get("s3_key", ""),
+                    "chunk_index": payload.get("chunk_index", 0),
+                    "filing_date": payload.get("filing_date", ""),
+                    "fact_type": payload.get("fact_type", ""),
+                    "source_url": payload.get("source_url", ""),
                 }
             )
         return matches
