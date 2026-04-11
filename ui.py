@@ -3,6 +3,7 @@ import requests
 import json
 import os
 from typing import List, Dict
+import pandas as pd
 
 # Configuration
 API_URL = "http://rag-service:8000"
@@ -189,14 +190,14 @@ if prompt := st.chat_input("Ask a question about your documents..."):
                     with st.expander("📚 View Sources"):
                         for i, source in enumerate(sources, 1):
                             st.markdown(f"""
-**Source {i}**
-- **File**: `{source.get('s3_key', '')}`
-- **Relevance Score**: {source['score']:.3f}
-- **Chunk**: {source.get('chunk_index', '')}
-- **Fact Type**: {source.get('fact_type', '—')}
-- **Filing Date**: {source.get('filing_date', '—') or '—'}
-- **Source URL**: {source.get('source_url', '—') or '—'}
-                            """)
+                **Source {i}**
+                - **File**: `{source.get('s3_key', '')}`
+                - **Relevance Score**: {source['score']:.3f}
+                - **Chunk**: {source.get('chunk_index', '')}
+                - **Fact Type**: {source.get('fact_type', '—')}
+                - **Filing Date**: {source.get('filing_date', '—') or '—'}
+                - **Source URL**: {source.get('source_url', '—') or '—'}
+                                            """)
               
         #        # Add assistant message to chat
         #        st.session_state.messages.append({
@@ -207,23 +208,23 @@ if prompt := st.chat_input("Ask a question about your documents..."):
         # COMMENTED OUT BLOCK REPLACED TEMPORARILY WITH DUMMY UI DATA (END)
 
                 # --- REAL API CALL ---
-        result = call_chat_api(prompt, top_k=top_k, temperature=temperature)
+            result = call_chat_api(prompt, top_k=top_k, temperature=temperature)
 
-        if "error" in result:
-            response = f"❌ Error: {result['error']}"
-            st.error(response)
+            if "error" in result:
+                response = f"❌ Error: {result['error']}"
+                st.error(response)
 
-            st.session_state.messages.append({
-                "role": "assistant",
-                "content": response
-            })
+                st.session_state.messages.append({
+                    "role": "assistant",
+                    "content": response
+                })
 
-        else:
-            overview = result.get("overview", "No overview generated")
-            metrics = result.get("metrics", {})
-            credibility = result.get("credibility", 0.0)
-            evidence_counts = result.get("evidence_counts", {})
-            sources = result.get("sources", [])
+            else:
+                overview = result.get("overview", "No overview generated")
+                metrics = result.get("metrics", {})
+                credibility = result.get("credibility", 0.0)
+                evidence_counts = result.get("evidence_counts", {})
+                sources = result.get("sources", [])
 
             # --- OVERVIEW TEXT ---
             st.markdown(overview)
