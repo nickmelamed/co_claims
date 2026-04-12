@@ -1,8 +1,16 @@
 import math
+from datetime import datetime, timezone
 import numpy as np
 
 EPS = 1e-6
 K_EVIDENCE = 5
+
+
+def _make_aware(dt):
+    """Ensure a datetime is timezone-aware (default to UTC if naive)."""
+    if dt is not None and dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt
 
 class DeterministicMetrics:
     def __init__(
@@ -47,7 +55,8 @@ class DeterministicMetrics:
 
         tau = half_life * 86400
 
-        valid_times = [t for t in evidence_times if t is not None]
+        claim_time = _make_aware(claim_time)
+        valid_times = [_make_aware(t) for t in evidence_times if t is not None]
 
         scores = []
         for t in valid_times:
