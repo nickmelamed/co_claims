@@ -1,4 +1,3 @@
-# TODO need to edit the output based on desired uses 
 import re
 from datetime import datetime, UTC
 import json

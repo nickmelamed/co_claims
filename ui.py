@@ -61,6 +61,13 @@ st.markdown("""
         color: white;
         border: 1px solid #374151;
     }
+            
+    /* Spinner */
+    .stSpinner > div,
+    .stSpinner div[role="status"],
+    [data-testid="stSpinner"] div {
+        border-color: #f59e0b transparent transparent transparent !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -88,6 +95,27 @@ def get_headers():
         headers["Authorization"] = f"Bearer {AUTH_TOKEN}"
     return headers
 
+# Patrick add to make follow up chat work
+def call_followup_api(original_claim: str, overview: str, metrics: dict, credibility: float, followup_question: str):
+    try:
+        response = requests.post(
+            f"{st.session_state.api_url}/followup",
+            headers=get_headers(),
+            json={
+                "original_claim": original_claim,
+                "overview": overview,
+                "metrics": metrics,
+                "credibility": credibility,
+                "followup_question": followup_question
+            },
+            timeout=60
+        )
+        if response.status_code == 200:
+            return response.json()
+        else:
+            return {"error": f"{response.status_code} - {response.text}"}
+    except Exception as e:
+        return {"error": str(e)}
 
 def call_chat_api(query: str, top_k: int = 5, temperature: float = 0.7):
     try:
@@ -152,6 +180,10 @@ with st.sidebar:
        st.session_state.analysis_done = False
        st.session_state.followup_messages = []
        st.session_state.followup_count = 0
+       if "analysis_result" in st.session_state:
+           del st.session_state.analysis_result
+       if "current_prompt" in st.session_state:
+           del st.session_state.current_prompt
        st.rerun()
   
    st.divider()
@@ -161,7 +193,7 @@ with st.sidebar:
    st.markdown("<div style='margin-bottom: 8px;'></div>", unsafe_allow_html=True)
    st.caption("📚 Referenced sources are shown at the bottom with the results of each prompt!")
    st.markdown("<div style='margin-bottom: 8px;'></div>", unsafe_allow_html=True)
-   st.caption("PLACEHOLDER - ADD LINK TO METRIC DEFINITIONS DOCUMENT")
+   st.markdown("[📄 Metric Definitions Document](https://drive.google.com/file/d/12r5lxP1mzfOSBbKNSKJWGhpQg6TEZF7w/view?usp=sharing)", unsafe_allow_html=True)
 
 
 # Main chat interface
@@ -208,7 +240,7 @@ if st.session_state.analysis_done:
 
     # Run analysis only once
     if "analysis_result" not in st.session_state:
-        with st.spinner("Running evaluation..."):
+        with st.spinner("⏳ Running evaluation..."):
             result = call_chat_api(st.session_state.current_prompt)
 
             if "error" in result:
@@ -284,7 +316,7 @@ if st.session_state.analysis_done:
 <div style="background:#374151; border-radius:6px;">
  <div style="background:#f59e0b; width:{val*100}%; height:10px;"></div>
 </div>
-<div style="font-size:12px;">{val:.2f}</div>
+<div style="font-size:12px; color:#ffffff;">{val:.2f}</div>
 """, unsafe_allow_html=True)
 
                     i += 1
@@ -295,18 +327,18 @@ if st.session_state.analysis_done:
             render_metric_group("Evidence Quality", evidence_metrics)
             render_metric_group("Claim Quality", claim_metrics)
 
-            # evidence counts
-            st.markdown("### Supporting vs Contradictory Evidence")
+            # # evidence counts
+            # st.markdown("### Supporting vs Contradictory Evidence")
 
-            support = evidence_counts.get("supporting", 0)
-            contradict = evidence_counts.get("contradicting", 0)
+            # support = evidence_counts.get("supporting", 0)
+            # contradict = evidence_counts.get("contradicting", 0)
 
-            chart_df = pd.DataFrame({
-                "Type": ["Supporting", "Contradictory"],
-                "Count": [support, contradict]
-            }).set_index("Type")
+            # chart_df = pd.DataFrame({
+            #     "Type": ["Supporting", "Contradictory"],
+            #     "Count": [support, contradict]
+            # }).set_index("Type")
 
-            st.bar_chart(chart_df)
+            # st.bar_chart(chart_df)
 
             # sources
             st.markdown("### Evidence Sources")
@@ -351,9 +383,10 @@ if st.session_state.analysis_done:
             "content": followup
         })
 
-        # Lightweight follow-up (no metrics re-render)
-        followup_result = call_chat_api(f"{prompt}\nFollow-up: {followup}")
-        reply = followup_result.get("overview", "No response generated.")
+        # Update to make follow-up chat work
+        with st.spinner("⏳ Running evaluation..."):
+            followup_result = call_followup_api(prompt, overview, metrics, credibility, followup)
+        reply = followup_result.get("reply", "No response generated.")
 
         st.session_state.followup_messages.append({
             "role": "assistant",
@@ -368,6 +401,6 @@ col1, col2, col3 = st.columns(3)
 with col1:
    st.caption("🔗 [API Docs](http://localhost:8000/docs)")
 with col2:
-   st.caption("📊 [Vector Database: Pinecone")
+   st.caption("📊 [Vector Database: Pinecone]")
 with col3:
    st.caption(f"💬 {len(st.session_state.messages)} messages")

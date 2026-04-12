@@ -1,4 +1,5 @@
 import asyncio
+import numpy as np
 
 class EvaluationPipeline:
     def __init__(
@@ -13,6 +14,7 @@ class EvaluationPipeline:
         escalation_router,
         debate_engine,
         adjudicator,
+        mode='full',
     ):
         self.embed_fn = embed_fn
         self.embed_batch_fn = embed_batch_fn
@@ -24,6 +26,7 @@ class EvaluationPipeline:
         self.router = escalation_router
         self.debate_engine = debate_engine
         self.adjudicator = adjudicator
+        self.mode = mode
 
     def _embed_evidence(self, evidence_list):
         missing = [e for e in evidence_list if "embedding" not in e]
@@ -92,7 +95,29 @@ class EvaluationPipeline:
         # print("EVIDENCE BEFORE TRIAGE:", len(evidence_list))
         # print("EVIDENCE AFTER TRIAGE:", len(filtered_evidence))
 
-        # initial evaluation 
+
+        # BASELINE (only deterministic, no LLM evaluation) TODO: replace this w/ proper deterministic 
+        if self.mode == 'baseline':
+            det_metrics = self.metrics.compute_deterministic_metrics(
+                claim_time,
+                filtered_evidence,
+                per_evidence_scores=[]
+            )
+
+            final_score = self.metrics.aggregator.credibility(
+                evidence_score=np.mean(list(det_metrics.values())),
+                claim_score=0.5,
+                n=len(filtered_evidence)
+            )
+
+            return {
+                "metrics": det_metrics,
+                "variances": {},
+                "credibility": final_score,
+                "mode": "baseline"
+            }
+        
+        # LLM on (single and escalation)
         metric_outputs = await self._evaluate(
             claim,
             claim_time,
@@ -102,6 +127,18 @@ class EvaluationPipeline:
 
         metrics = metric_outputs["metrics"]
         variances = metric_outputs["variances"]
+
+        # skipping escalation (if single)
+
+        if self.mode != 'full':
+            return {
+                "metrics": metrics,
+                "variances": variances,
+                "credibility": metric_outputs["final_score"],
+                "mode": self.mode
+            }
+        
+        # escalation (for full mode only)
 
         # uncertainty analysis 
         analysis = self.uncertainty.analyze(variances)
@@ -208,5 +245,6 @@ class EvaluationPipeline:
             "decision": decision_obj,
             "credibility": metric_outputs["final_score"],
             "entities": entities,
+            "mode": "full"
             #"raw_judgments": metric_outputs.get("raw_judgments")
         }

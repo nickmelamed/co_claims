@@ -35,15 +35,17 @@ logger = get_logger("RAGService")
 
 pipeline = build_pipeline()
 
+# Patrick update function
 def parse_timestamp(ts):
-    if not ts:
-        return None
-    if isinstance(ts, datetime):
-        return ts
-    try:
-        return datetime.fromisoformat(ts)
-    except:
-        return None
+   if not ts:
+       return None
+   if isinstance(ts, datetime):
+       return ts.replace(tzinfo=timezone.utc) if ts.tzinfo is None else ts
+   try:
+       parsed = datetime.fromisoformat(ts)
+       return parsed.replace(tzinfo=timezone.utc) if parsed.tzinfo is None else parsed
+   except:
+       return None
 
 # Initialize RAG components (using default index name "knowledge")
 ingestor = RAGIngestor(aws_region=AWS_REGION, max_embed_workers=24)
@@ -68,7 +70,7 @@ class ChatRequest(BaseModel):
    max_tokens: Optional[int] = 500
    temperature: Optional[float] = 0.7
 
-
+# Update to make follow-up convo work (start)
 class ChatResponse(BaseModel):
     query: str
     overview: str
@@ -77,6 +79,125 @@ class ChatResponse(BaseModel):
     evidence_counts: dict
     sources: list
 
+class FollowupRequest(BaseModel):
+    original_claim: str
+    overview: str
+    metrics: dict
+    credibility: float
+    followup_question: str
+    variances: Optional[dict] = {}
+    sources: Optional[list] = []
+
+def classify_question(q: str):
+    q = q.lower()
+    if "why" in q:
+        return "why"
+    elif "improve" in q or "better" in q:
+        return "improve"
+    elif "evidence" in q or "source" in q:
+        return "evidence"
+    elif "score" in q or "metric" in q:
+        return "metrics"
+    return "general"
+
+def build_evidence_context(sources, max_items=5, max_chars=300):
+    formatted = []
+    for i, s in enumerate(sources[:max_items]):
+        text = (s.get("text") or "")[:max_chars]
+        formatted.append(
+            f"[{i+1}] {text}\nURL: {s.get('url')}\nScore: {s.get('score')}"
+        )
+    return "\n\n".join(formatted)
+
+@app.post("/followup")
+async def followup(request: FollowupRequest, authorized: bool = Depends(verify_auth)):
+    try:
+        question_type = classify_question(request.followup_question)
+
+        evidence_context = build_evidence_context(request.sources)
+
+        followup_prompt = f"""
+You are an expert assistant explaining the results of a claim evaluation system.
+
+Your job is to answer follow-up questions about:
+- the credibility score
+- the evaluation metrics
+- the retrieved evidence
+- the reasoning behind the analysis
+
+Original Claim
+{request.original_claim}
+
+Summary of Analysis
+{request.overview}
+
+Credibility Score
+{request.credibility}
+
+Metrics (0-1 scale)
+{request.metrics}
+
+Metric Variances (uncertainty)
+{request.variances}
+
+Metric definitions:
+- ESS: Evidence Support Score
+- ECS: Evidence Contradiction Score
+- CMS: Claim Measurability
+- LCS: Logical Consistency
+- HLS: Hedging Level
+- EAS: Evidence Availability
+- ERS: Evidence Recency
+- ESTS: Evidence Strength
+- EAGS: Evidence Agreement
+- SRS: Source Diversity
+- EVS: External Verifiability
+- CScope: Claim Scope
+
+Evidence (Top Retrieved)
+{evidence_context}
+
+Question Tyep
+{question_type}
+
+Follow-up Question
+{request.followup_question}
+
+Instructions
+
+1. ONLY use the provided metrics, summary, and evidence.
+2. Do NOT invent facts or evidence.
+3. Be concise but insightful.
+
+4. Behavior by question type:
+   - WHY:
+     Explain the reasoning using both metrics and evidence.
+   - METRICS:
+     Interpret scores clearly (what is high/low and why).
+   - EVIDENCE:
+     Reference specific evidence snippets (e.g., [1], [2]).
+   - IMPROVE:
+     Suggest concrete ways to improve credibility (better evidence, clearer claim, etc.).
+   - GENERAL:
+     Provide a helpful explanation grounded in the analysis.
+
+5. If uncertainty is high (variance is large), mention it.
+
+6. If information is missing, say so explicitly.
+
+Respond conversationally.
+"""
+
+        reply = await asyncio.to_thread(llm.chat, followup_prompt, 0.5, 400)
+
+        return {
+            "reply": reply,
+            "question_type": question_type
+        }
+
+    except Exception as e:
+        logger.error("FULL TRACEBACK:\n" + traceback.format_exc())
+        raise HTTPException(status_code=500, detail=str(e))
 
 def parse_evidence_text(raw_text: str):
     if not raw_text:
@@ -89,7 +210,7 @@ def parse_evidence_text(raw_text: str):
     topic = parts[-3] if len(parts) >= 3 else None
     sentiment = parts[-2] if len(parts) >= 2 else None
 
-    # 🔥 only extract quoted text if it exists
+    # only extract quoted text if it exists
     if '"' in raw_text:
         clean_text = raw_text.split('"')[-2].strip()
     else:

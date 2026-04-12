@@ -47,56 +47,69 @@ def embed_batch(texts):
 def get_client(model_id):
     return BedrockClient(model_id)
 
-def build_pipeline():
+def build_pipeline(mode="full"):
 
-    # Judges
-    qwen = QwenJudge(client=get_client("qwen.qwen3-32b-v1:0")) #TODO: find replacement model
-    mixtral = MixtralJudge(client=get_client("mistral.mistral-7b-instruct-v0:2"))
-    deepseek = DeepSeekJudge(client=get_client("deepseek.r1-v1:0"))
+    # embeddings 
+    embed_fn_local = embed_fn
+    embed_batch_local = embed_batch
 
-    ensemble = JudgeEnsemble([qwen, mixtral])
-    llm_judge = UnifiedLLMJudge(ensemble)
-
-    # Deterministic
+    # deterministic 
     deterministic = DeterministicMetrics(
         type_weight_fn=get_type_weight,
         verifiable_fn=is_verifiable
     )
     aggregator = Aggregator()
 
-    metric_executor = UnifiedExecutor(
+    # judges 
+    qwen = QwenJudge(client=get_client("qwen.qwen3-32b-v1:0"))
+
+    if mode == "single_llm":
+        llm_judge = UnifiedLLMJudge(qwen)
+
+    elif mode == "full":
+        mixtral = MixtralJudge(client=get_client("mistral.mistral-7b-instruct-v0:2"))
+        ensemble = JudgeEnsemble([qwen, mixtral])
+        llm_judge = UnifiedLLMJudge(ensemble)
+
+    else:
+        llm_judge = None  # baseline
+
+    # executor 
+    executor = UnifiedExecutor(
         llm_judge=llm_judge,
         deterministic_metrics=deterministic,
-        aggregator=aggregator
+        aggregator=aggregator,
+        use_llm=(mode != "baseline")
     )
 
-    # Pipeline components
+    # pipeline 
+    deepseek = DeepSeekJudge(client=get_client("deepseek.r1-v1:0"))
     reasoner = ClaimReasoner(deepseek)
 
     extractor = FeatureExtractor()
 
     entity_resolver = EntityResolver(
         extractor=extractor,
-        reasoner=reasoner # can set to none to disable LLM 
+        reasoner=reasoner
     )
-
 
     triage = EvidenceTriage(Similarity())
     router = EscalationRouter()
     uncertainty = UncertaintyAnalyzer()
 
-    debate_engine = DebateEngine(qwen, mixtral)
+    debate_engine = DebateEngine(qwen, mixtral)  
     adjudicator = Adjudicator(qwen)
 
     return EvaluationPipeline(
-        embed_fn=embed_fn,
-        embed_batch_fn=embed_batch,
+        embed_fn=embed_fn_local,
+        embed_batch_fn=embed_batch_local,
         entity_resolver=entity_resolver,
         reasoner=reasoner,
         triage=triage,
-        metric_executor=metric_executor,
+        metric_executor=executor,
         uncertainty_analyzer=uncertainty,
         escalation_router=router,
         debate_engine=debate_engine,
         adjudicator=adjudicator,
+        mode=mode  # 🔥 KEY
     )

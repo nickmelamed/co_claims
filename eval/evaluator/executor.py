@@ -1,14 +1,37 @@
 import numpy as np
 
 class UnifiedExecutor:
-    def __init__(self, llm_judge, deterministic_metrics, aggregator):
+    def __init__(self, llm_judge, deterministic_metrics, aggregator, use_llm = True):
         self.llm_judge = llm_judge
         self.det = deterministic_metrics
         self.aggregator = aggregator
+        self.use_llm = use_llm
 
     async def evaluate(self, claim, claim_time, evidence_list, entities):
 
         relevances = [e.get("relevance", 0.5) for e in evidence_list]
+
+        # baseline TODO: replace this w/ proper deterministic 
+        if not self.use_llm:
+            det_metrics = self.compute_deterministic_metrics(
+                claim_time,
+                evidence_list,
+                per_evidence_scores=[]
+            )
+
+            final_score = self.aggregator.credibility(
+                evidence_score=np.mean(list(det_metrics.values())),
+                claim_score=0.5,
+                n=len(evidence_list)
+            )
+
+            return {
+                "final_score": final_score,
+                "metrics": det_metrics,
+                "variances": {}
+            }
+        
+        # TODO: need to do single LLM call w/ Qwen, not whole judge call 
 
         llm_metrics, llm_variances, per_evidence_scores = await self.llm_judge.evaluate(
             claim,
