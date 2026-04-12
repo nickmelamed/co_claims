@@ -1,12 +1,21 @@
-FROM python:3.11-slim
+FROM python:3.11-slim AS base
 WORKDIR /app
 
+# Layer 1: Heavy ML deps (changes rarely, cached aggressively)
+COPY requirements-ml.txt .
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install -r requirements-ml.txt
+
+# Layer 2: Everything else (lighter, faster to reinstall)
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install -r requirements.txt
 
-COPY . /app
-
+# Layer 3: spaCy model
 RUN python -m spacy download en_core_web_sm
+
+# Layer 4: Application code (changes most often, rebuilt fastest)
+COPY . /app
 
 ENV PYTHONPATH=/app
 
