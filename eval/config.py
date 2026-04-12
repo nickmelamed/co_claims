@@ -111,5 +111,5 @@ def build_pipeline(mode="full"):
         escalation_router=router,
         debate_engine=debate_engine,
         adjudicator=adjudicator,
-        mode=mode  # 🔥 KEY
+        mode=mode  
     )

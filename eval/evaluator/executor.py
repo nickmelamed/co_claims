@@ -1,11 +1,19 @@
 import numpy as np
 
+from eval.evaluator.deterministic.support import SupportScorer
+from eval.evaluator.deterministic.contradiction import ContradictionScorer
+from eval.evaluator.deterministic.extractor import FeatureExtractor
+
 class UnifiedExecutor:
     def __init__(self, llm_judge, deterministic_metrics, aggregator, use_llm = True):
         self.llm_judge = llm_judge
         self.det = deterministic_metrics
         self.aggregator = aggregator
         self.use_llm = use_llm
+        
+        self.support = SupportScorer()
+        self.contradiction = ContradictionScorer()
+        self.extractor = FeatureExtractor()
 
     async def evaluate(self, claim, claim_time, evidence_list, entities):
 
@@ -13,25 +21,82 @@ class UnifiedExecutor:
 
         # baseline TODO: replace this w/ proper deterministic 
         if not self.use_llm:
+
+            claim_f = self.det.extractor.extract(claim)
+
+            evidence_features = [
+                self.det.extractor.extract(e["text"])
+                for e in evidence_list
+            ]
+
+            supports = [
+                self.det.support.score(claim_f, ef)
+                for ef in evidence_features
+            ]
+
+            contradictions = [
+                self.det.contradiction.score(claim_f, ef)
+                for ef in evidence_features
+            ]
+
+            ess = self.det.ess(supports, relevances)
+            ecs = self.det.ecs(contradictions, relevances)
+            eags = self.det.eags(supports)
+            cms = self.det.cms(claim_f['entities'])
+            hls = self.det.hls(claim_f)
+            lcs = self.det.lcs(claim_f)
+
             det_metrics = self.compute_deterministic_metrics(
                 claim_time,
                 evidence_list,
-                per_evidence_scores=[]
+                per_evidence_scores=[],
+                mode='baseline'
             )
 
+            full_metrics = {
+                "ESS": ess,
+                "ECS": ecs,
+                "EAGS": eags,
+                "CMS": cms,
+                "HLS": hls,
+                "LCS": lcs,
+                **det_metrics
+            }
+
+            claim_score = np.mean([
+                cms,
+                1 - hls,
+                lcs,
+                self.det.cscope(claim_f["entities"])
+            ])
+
+            evidence_score = np.mean([
+                ess,
+                1 - ecs,
+                det_metrics["EAS"],
+                det_metrics["ERS"],
+                det_metrics["ESTS"],
+                eags,
+                det_metrics["SDS"],
+                det_metrics["EVS"]
+            ])
+
             final_score = self.aggregator.credibility(
-                evidence_score=np.mean(list(det_metrics.values())),
-                claim_score=0.5,
-                n=len(evidence_list)
+                evidence_score,
+                claim_score,
+                len(evidence_list)
             )
 
             return {
                 "final_score": final_score,
-                "metrics": det_metrics,
+                "metrics": {
+                    **full_metrics,
+                    "claim_score": claim_score,
+                    "evidence_score": evidence_score
+                },
                 "variances": {}
             }
         
-        # TODO: need to do single LLM call w/ Qwen, not whole judge call 
 
         llm_metrics, llm_variances, per_evidence_scores = await self.llm_judge.evaluate(
             claim,
@@ -149,7 +214,7 @@ class UnifiedExecutor:
         return evidence_score, evidence_variance
 
     # deterministic 
-    def compute_deterministic_metrics(self, claim_time, evidence_list, per_evidence_scores):
+    def compute_deterministic_metrics(self, claim_time, evidence_list, per_evidence_scores, mode='full'):
         n = len(evidence_list)
 
         timestamps = [e.get("timestamp") for e in evidence_list]
@@ -173,6 +238,18 @@ class UnifiedExecutor:
         ests = self.det.ests(relevances, source_types)
         evs = self.det.evs(source_types)
 
+        eas = self.det.eas(n)
+
+        # in baseline eval, don't calculate EAgS
+        if mode != 'full':
+            return {
+            "EAS": eas,
+            "ERS": ers,
+            "ESTS": ests,
+            "SDS": sds,
+            "EVS": evs
+        }
+
         # get individual evidence supports 
         supports = [s["ESS"]["score"] for s in per_evidence_scores]
         weights = [s["ESS"]["confidence"] for s in per_evidence_scores]
@@ -180,7 +257,7 @@ class UnifiedExecutor:
         eags = self.det.weighted_avg(supports, weights)
 
         return {
-            "EAS": self.det.eas(n),
+            "EAS": eas,
             "ERS": ers,
             "ESTS": ests,
             "EAGS": eags,

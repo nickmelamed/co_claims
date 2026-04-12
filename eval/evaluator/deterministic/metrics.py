@@ -1,9 +1,18 @@
 import math
 from datetime import datetime, timezone
 import numpy as np
+from itertools import combinations
+
+# config 
 
 EPS = 1e-6
 K_EVIDENCE = 5
+
+HEDGE_TERMS = {
+    "may", "might", "could", "can", "suggests", "appears",
+    "likely", "potentially", "approximately", "generally", "often"
+}
+
 
 
 def _make_aware(dt):
@@ -16,8 +25,9 @@ class DeterministicMetrics:
     def __init__(
         self,
         k_evidence: int = 5,
-        half_life: float = 365.0,
+        half_life: float = 90.0,
         epsilon: float = 1e-6,
+        hedge_lexicon=HEDGE_TERMS,
         type_weight_fn=None,
         verifiable_fn=None,
         time_fn=None,
@@ -26,6 +36,7 @@ class DeterministicMetrics:
         self.K_EVIDENCE = k_evidence
         self.HALF_LIFE = half_life
         self.EPS = epsilon
+        self.HEDGE_LEXICON = hedge_lexicon
 
         # from source_types.py
         self.type_weight_fn = type_weight_fn
@@ -41,6 +52,8 @@ class DeterministicMetrics:
 
     def _clip(self, x):
         return max(0.0, min(1.0, x))
+    
+    ### used in every evaluation ###
 
     def cscope(self, entities):
             n = len(entities)
@@ -133,3 +146,44 @@ class DeterministicMetrics:
         coverage = sum(1 for s in source_types if s != "unknown") / len(source_types)
 
         return self._clip(base_score * coverage)
+    
+    ### used only if we are running the deterministic-only baseline 
+
+    # TODO: check these metrics actually run 
+    def hls(self, claim_f):
+        tokens = claim_f["tokens"]
+        if not tokens:
+            return 1.0
+
+        hedge_count = sum(1 for t in tokens if t in self.HEDGE_LEXICON)
+        return hedge_count / len(tokens)
+    
+    def cms(self, entities):
+        weights = []
+        for e in entities:
+            if any(char.isdigit() for char in e):
+                weights.append(1.0)
+            else:
+                weights.append(0.0)
+        return sum(weights) / max(1, len(entities))
+    
+    def lcs(self, claim_f):
+        doc = claim_f["doc"]
+        props = [sent.text for sent in doc.sents]
+
+        if len(props) < 2:
+            return 1.0
+
+        scores = []
+        for p1, p2 in combinations(props, 2):
+            f1 = {"tokens": set(p1.lower().split()), "entities": claim_f["entities"]}
+            f2 = {"tokens": set(p2.lower().split()), "entities": claim_f["entities"]}
+            scores.append(self.contradiction.score(f1, f2))
+
+        return 1 - (sum(scores) / (len(scores) + EPS)) 
+    
+    def ess(self, supports, relevances):
+        return self.weighted_avg(supports, relevances)
+
+    def ecs(self, contradictions, relevances):
+        return self.weighted_avg(contradictions, relevances)
