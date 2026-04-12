@@ -85,32 +85,119 @@ class FollowupRequest(BaseModel):
     metrics: dict
     credibility: float
     followup_question: str
+    variances: Optional[dict] = {}
+    sources: Optional[list] = []
+
+def classify_question(q: str):
+    q = q.lower()
+    if "why" in q:
+        return "why"
+    elif "improve" in q or "better" in q:
+        return "improve"
+    elif "evidence" in q or "source" in q:
+        return "evidence"
+    elif "score" in q or "metric" in q:
+        return "metrics"
+    return "general"
+
+def build_evidence_context(sources, max_items=5, max_chars=300):
+    formatted = []
+    for i, s in enumerate(sources[:max_items]):
+        text = (s.get("text") or "")[:max_chars]
+        formatted.append(
+            f"[{i+1}] {text}\nURL: {s.get('url')}\nScore: {s.get('score')}"
+        )
+    return "\n\n".join(formatted)
 
 @app.post("/followup")
 async def followup(request: FollowupRequest, authorized: bool = Depends(verify_auth)):
     try:
+        question_type = classify_question(request.followup_question)
+
+        evidence_context = build_evidence_context(request.sources)
+
         followup_prompt = f"""
-You are a helpful assistant answering follow-up questions about a completed claim evaluation.
+You are an expert assistant explaining the results of a claim evaluation system.
 
-Original claim: {request.original_claim}
+Your job is to answer follow-up questions about:
+- the credibility score
+- the evaluation metrics
+- the retrieved evidence
+- the reasoning behind the analysis
 
-Prior analysis summary: {request.overview}
+Original Claim
+{request.original_claim}
 
-Credibility score: {request.credibility}
+Summary of Analysis
+{request.overview}
 
-Metrics: {request.metrics}
+Credibility Score
+{request.credibility}
 
-Follow-up question: {request.followup_question}
+Metrics (0-1 scale)
+{request.metrics}
 
-Answer the follow-up question conversationally based on the analysis above. Be concise and helpful.
+Metric Variances (uncertainty)
+{request.variances}
+
+Metric definitions:
+- ESS: Evidence Support Score
+- ECS: Evidence Contradiction Score
+- CMS: Claim Measurability
+- LCS: Logical Consistency
+- HLS: Hedging Level
+- EAS: Evidence Availability
+- ERS: Evidence Recency
+- ESTS: Evidence Strength
+- EAGS: Evidence Agreement
+- SRS: Source Diversity
+- EVS: External Verifiability
+- CScope: Claim Scope
+
+Evidence (Top Retrieved)
+{evidence_context}
+
+Question Tyep
+{question_type}
+
+Follow-up Question
+{request.followup_question}
+
+Instructions
+
+1. ONLY use the provided metrics, summary, and evidence.
+2. Do NOT invent facts or evidence.
+3. Be concise but insightful.
+
+4. Behavior by question type:
+   - WHY:
+     Explain the reasoning using both metrics and evidence.
+   - METRICS:
+     Interpret scores clearly (what is high/low and why).
+   - EVIDENCE:
+     Reference specific evidence snippets (e.g., [1], [2]).
+   - IMPROVE:
+     Suggest concrete ways to improve credibility (better evidence, clearer claim, etc.).
+   - GENERAL:
+     Provide a helpful explanation grounded in the analysis.
+
+5. If uncertainty is high (variance is large), mention it.
+
+6. If information is missing, say so explicitly.
+
+Respond conversationally.
 """
-        reply = await asyncio.to_thread(llm.chat, followup_prompt, 0.5, 300)
-        return {"reply": reply}
+
+        reply = await asyncio.to_thread(llm.chat, followup_prompt, 0.5, 400)
+
+        return {
+            "reply": reply,
+            "question_type": question_type
+        }
 
     except Exception as e:
         logger.error("FULL TRACEBACK:\n" + traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
-# Update to make follow-up convo work (end)
 
 def parse_evidence_text(raw_text: str):
     if not raw_text:
@@ -123,7 +210,7 @@ def parse_evidence_text(raw_text: str):
     topic = parts[-3] if len(parts) >= 3 else None
     sentiment = parts[-2] if len(parts) >= 2 else None
 
-    # 🔥 only extract quoted text if it exists
+    # only extract quoted text if it exists
     if '"' in raw_text:
         clean_text = raw_text.split('"')[-2].strip()
     else:
