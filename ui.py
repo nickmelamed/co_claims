@@ -193,7 +193,7 @@ with st.sidebar:
    st.markdown("<div style='margin-bottom: 8px;'></div>", unsafe_allow_html=True)
    st.caption("📚 Referenced sources are shown at the bottom with the results of each prompt!")
    st.markdown("<div style='margin-bottom: 8px;'></div>", unsafe_allow_html=True)
-   st.caption("PLACEHOLDER - ADD LINK TO METRIC DEFINITIONS DOCUMENT")
+   st.markdown("[📄 Metric Definitions Document](https://drive.google.com/file/d/12r5lxP1mzfOSBbKNSKJWGhpQg6TEZF7w/view?usp=sharing)", unsafe_allow_html=True)
 
 
 # Main chat interface
