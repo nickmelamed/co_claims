@@ -13,7 +13,11 @@ build-ec2:
 	DOCKER_BUILDKIT=1 docker compose -f docker-compose.yml -f docker-compose.ec2.yml build
 
 push-ecr:
-	@echo "Tag and push images to ECR, e.g.:"
-	@echo "  docker tag co_claims-rag-service:latest <account>.dkr.ecr.<region>.amazonaws.com/rag-service:latest"
-	@echo "  docker push <account>.dkr.ecr.<region>.amazonaws.com/rag-service:latest"
+	aws ecr get-login-password --region us-west-1 | docker login --username AWS --password-stdin 651706748630.dkr.ecr.us-west-1.amazonaws.com
+
+	docker tag co_claims-rag-service:latest 651706748630.dkr.ecr.us-west-1.amazonaws.com/co-claims:rag-service
+	docker push 651706748630.dkr.ecr.us-west-1.amazonaws.com/co-claims:rag-service
+
+	docker tag co_claims-streamlit-ui:latest 651706748630.dkr.ecr.us-west-1.amazonaws.com/co-claims:streamlit-ui
+	docker push 651706748630.dkr.ecr.us-west-1.amazonaws.com/co-claims:streamlit-ui
 
