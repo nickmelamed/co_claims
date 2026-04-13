@@ -1,25 +1,29 @@
 services:
   rag-service:
     build:
-      context: .
-      dockerfile: Dockerfile.api
+      context: ..
+      dockerfile: docker/Dockerfile.api
     container_name: rag-service
     ports:
       - "8000:8000"
+    env_file:
+      - ../.env
     environment:
+      - PYTHONPATH=/app
       - PINECONE_API_KEY=${PINECONE_API_KEY}
-      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-      - AWS_REGION=${AWS_REGION:-us-east-1}
-      - AWS_BEARER_TOKEN_BEDROCK=${AWS_BEARER_TOKEN_BEDROCK} #Patrick removed duplicate line
+      #- AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} # commenting out for .env file redundancy 
+      #- AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      #- AWS_REGION=${AWS_REGION:-us-east-1}
+      #- AWS_BEARER_TOKEN_BEDROCK=${AWS_BEARER_TOKEN_BEDROCK} 
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - EMBED_MODEL=${EMBED_MODEL:-amazon.titan-embed-text-v2:0}
       - QDRANT_URL=${QDRANT_URL:-http://qdrant:6333}
       - AUTH_TOKEN=${AUTH_TOKEN}
-      - HF_TOKEN=${HF_TOKEN}
+      #- HF_TOKEN=${HF_TOKEN}
       - HF_HOME=/data/hf_cache
       - TRANSFORMERS_CACHE=/data/hf_cache
       - HUGGINGFACE_HUB_CACHE=/data/hf_cache
+
     restart: unless-stopped
     depends_on:
       - qdrant
@@ -40,16 +44,19 @@ services:
 
   streamlit-ui:
     build:
-      context: .
-      dockerfile: Dockerfile.ui
+      context: ..
+      dockerfile: docker/Dockerfile.ui
     container_name: streamlit-ui
     ports:
       - "8501:8501"
     depends_on:
       - rag-service
     environment:
+      - PYTHONPATH=/app
       - AUTH_TOKEN=${AUTH_TOKEN}
       - RAG_API_URL=http://rag-service:8000
+    env_file:
+      - ../.env
     restart: unless-stopped
 
 volumes:

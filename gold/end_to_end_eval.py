@@ -13,7 +13,7 @@ load_dotenv()
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.append(ROOT)
 
-from RAGService import retrieve_fn
+from RAG.retriever import retrieve_fn
 from eval.config import build_pipeline
 from eval.evaluator.deterministic.source_types import extract_domain
 
