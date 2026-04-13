@@ -62,12 +62,13 @@ def build_pipeline(mode="full", retrieve_fn=None):
 
     # judges 
     qwen = QwenJudge(client=get_client("qwen.qwen3-32b-v1:0"))
+    mixtral = MixtralJudge(client=get_client("mistral.mistral-7b-instruct-v0:2"))
 
     if mode == "single_llm":
-        llm_judge = UnifiedLLMJudge(qwen)
+        ensemble = JudgeEnsemble([qwen]) # use single judge as "ensemble"
+        llm_judge = UnifiedLLMJudge(ensemble)
 
     elif mode == "full":
-        mixtral = MixtralJudge(client=get_client("mistral.mistral-7b-instruct-v0:2"))
         ensemble = JudgeEnsemble([qwen, mixtral])
         llm_judge = UnifiedLLMJudge(ensemble)
 

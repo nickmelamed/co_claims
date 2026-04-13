@@ -23,24 +23,20 @@ class DeepSeekJudge(BaseJudge):
 
     def _parse(self, response):
         try:
-            text = str(response)  # since Bedrock returns string
+            text = str(response)
 
-            #print("RAW TEXT:", text[:500])
-
-            import re
+            # 1. Try <json> tags
             match = re.search(r"<json>(.*?)</json>", text, re.DOTALL)
-
             if match:
-                json_str = match.group(1)
-            else:
-                print("⚠️ NO JSON TAG FOUND")
-                return {}
+                return json.loads(match.group(1))
 
-            parsed = json.loads(json_str)
+            # 2. Fallback: try raw JSON extraction
+            match = re.search(r"\{.*\}", text, re.DOTALL)
+            if match:
+                return json.loads(match.group(0))
 
-            #print("PARSED:", parsed)
-
-            return parsed if isinstance(parsed, dict) else {}
+            print("⚠️ NO JSON FOUND AT ALL")
+            return {}
 
         except Exception as e:
             print("❌ PARSE FAILED:", e)

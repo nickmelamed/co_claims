@@ -2,6 +2,8 @@ import math
 from datetime import datetime, timezone
 import numpy as np
 from itertools import combinations
+from .support import SupportScorer
+from .contradiction import ContradictionScorer
 
 # config 
 
@@ -32,11 +34,15 @@ class DeterministicMetrics:
         verifiable_fn=None,
         time_fn=None,
         normalize_scores: bool = True,
+        support=None,
+        contradiction=None
     ):
         self.K_EVIDENCE = k_evidence
         self.HALF_LIFE = half_life
         self.EPS = epsilon
         self.HEDGE_LEXICON = hedge_lexicon
+        self.support = SupportScorer()
+        self.contradiction = ContradictionScorer()
 
         # from source_types.py
         self.type_weight_fn = type_weight_fn

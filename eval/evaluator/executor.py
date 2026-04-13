@@ -21,10 +21,10 @@ class UnifiedExecutor:
 
         if not self.use_llm:
 
-            claim_f = self.det.extractor.extract(claim)
+            claim_f = self.extractor.extract(claim)
 
             evidence_features = [
-                self.det.extractor.extract(e["text"])
+                self.extractor.extract(e["text"])
                 for e in evidence_list
             ]
 

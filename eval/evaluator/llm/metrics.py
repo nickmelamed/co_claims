@@ -142,8 +142,23 @@ Now evaluate. Output ONLY valid JSON inside <json>...</json> tags. Do not includ
   "LCS": {{"score": float, "confidence": float}},
   "HLS": {{"score": float, "confidence": float}}
 }}
-</json>
 
+IMPORTANT:
+- Do NOT include any text outside <json> tags
+- Do NOT explain anything
+- Do NOT include markdown
+- ONLY output the JSON block
+
+Return EXACTLY this format: 
+</json>
+{{
+  "ESS": {{"score": float, "confidence": float}},
+  "ECS": {{"score": float, "confidence": float}},
+  "CMS": {{"score": float, "confidence": float}},
+  "LCS": {{"score": float, "confidence": float}},
+  "HLS": {{"score": float, "confidence": float}}
+}}
+</json>
 """
 
 METRICS = ["ESS", "ECS", "CMS", "LCS", "HLS"]
