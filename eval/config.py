@@ -47,7 +47,7 @@ def embed_batch(texts):
 def get_client(model_id):
     return BedrockClient(model_id)
 
-def build_pipeline(mode="full"):
+def build_pipeline(mode="full", retrieve_fn=None):
 
     # embeddings 
     embed_fn_local = embed_fn
@@ -111,5 +111,6 @@ def build_pipeline(mode="full"):
         escalation_router=router,
         debate_engine=debate_engine,
         adjudicator=adjudicator,
+        retrieve_fn=retrieve_fn,
         mode=mode  
     )

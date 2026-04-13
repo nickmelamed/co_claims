@@ -148,8 +148,6 @@ class DeterministicMetrics:
         return self._clip(base_score * coverage)
     
     ### used only if we are running the deterministic-only baseline 
-
-    # TODO: check these metrics actually run 
     def hls(self, claim_f):
         tokens = claim_f["tokens"]
         if not tokens:

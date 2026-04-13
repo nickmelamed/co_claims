@@ -19,7 +19,6 @@ class UnifiedExecutor:
 
         relevances = [e.get("relevance", 0.5) for e in evidence_list]
 
-        # baseline TODO: replace this w/ proper deterministic 
         if not self.use_llm:
 
             claim_f = self.det.extractor.extract(claim)

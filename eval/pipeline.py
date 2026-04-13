@@ -14,6 +14,7 @@ class EvaluationPipeline:
         escalation_router,
         debate_engine,
         adjudicator,
+        retrieve_fn=None,
         mode='full',
     ):
         self.embed_fn = embed_fn
@@ -26,6 +27,7 @@ class EvaluationPipeline:
         self.router = escalation_router
         self.debate_engine = debate_engine
         self.adjudicator = adjudicator
+        self.retrieve_fn = retrieve_fn
         self.mode = mode
 
     def _embed_evidence(self, evidence_list):
@@ -71,7 +73,7 @@ class EvaluationPipeline:
         if resolved is None:
             resolved = {"entities": []}
 
-        entities = resolved['entities']
+        entities = resolved.get("entities") or []
 
         # debugging 
         if entities is None:
@@ -96,28 +98,6 @@ class EvaluationPipeline:
         # print("EVIDENCE AFTER TRIAGE:", len(filtered_evidence))
 
 
-        # BASELINE (only deterministic, no LLM evaluation) TODO: replace this w/ proper deterministic 
-        if self.mode == 'baseline':
-            det_metrics = self.metrics.compute_deterministic_metrics(
-                claim_time,
-                filtered_evidence,
-                per_evidence_scores=[]
-            )
-
-            final_score = self.metrics.aggregator.credibility(
-                evidence_score=np.mean(list(det_metrics.values())),
-                claim_score=0.5,
-                n=len(filtered_evidence)
-            )
-
-            return {
-                "metrics": det_metrics,
-                "variances": {},
-                "credibility": final_score,
-                "mode": "baseline"
-            }
-        
-        # LLM on (single and escalation)
         metric_outputs = await self._evaluate(
             claim,
             claim_time,
@@ -135,6 +115,7 @@ class EvaluationPipeline:
                 "metrics": metrics,
                 "variances": variances,
                 "credibility": metric_outputs["final_score"],
+                "entities": entities,
                 "mode": self.mode
             }
         
@@ -162,34 +143,45 @@ class EvaluationPipeline:
                     claim
                 )
 
-            # TODO: implement proper logic given what "refine claim" means 
-            if "refine_claim" in actions and self.entity_resolver.reasoner:
-                # structured = await asyncio.to_thread(
-                #     self.entity_resolver.reasoner.structure,
-                #     claim
-                # )
-                # claim = structured.get("refined_claim", claim)
-                pass
+                claim_embedding = await asyncio.to_thread(self.embed_fn, claim)
 
-            # Global reset
-            # TODO: implement proper logic given new RAG 
-            if "global_review" in actions:
-                # evidence_list = self.retriever.retrieve(claim, extra=True)
-                # self._embed_evidence(evidence_list)
-                # self._attach_relevance(claim_embedding, evidence_list)
+            if self.retrieve_fn:
 
-                # filtered_evidence = evidence_list
-                pass
+                # GLOBAL RESET (strongest action)
+                if "global_review" in actions:
+                    new_evidence = await self.retrieve_fn(claim, extra=True)
 
-            else:
-                # if "more_evidence" in actions:
-                #     new_evidence = self.retriever.retrieve(claim, extra=True)
+                    self._embed_evidence(new_evidence)
+                    self._attach_relevance(claim_embedding, new_evidence)
 
-                #     self._embed_evidence(new_evidence)
-                #     self._attach_relevance(claim_embedding, new_evidence)
+                    filtered_evidence = self.triage.filter(
+                        claim_embedding,
+                        new_evidence
+                    )
 
-                #     filtered_evidence.extend(new_evidence)
-                pass
+                # INCREMENTAL RETRIEVAL
+                elif "more_evidence" in actions:
+                    new_evidence = await self.retrieve_fn(claim, extra=True)
+
+                    # deduplicate by text or url
+                    existing_texts = set(e["text"] for e in filtered_evidence)
+
+                    new_evidence = [
+                        e for e in new_evidence
+                        if e["text"] not in existing_texts
+                    ]
+
+                    if new_evidence:
+                        self._embed_evidence(new_evidence)
+                        self._attach_relevance(claim_embedding, new_evidence)
+
+                        filtered_evidence.extend(new_evidence)
+
+                        # re-triage after adding
+                        filtered_evidence = self.triage.filter(
+                            claim_embedding,
+                            filtered_evidence
+                        )
 
             # Re-evaluate after changes
 
@@ -202,7 +194,7 @@ class EvaluationPipeline:
             if resolved is None: 
                 resolved = {"entities": []}
 
-            entities = resolved['entities']
+            entities = (resolved or {}).get("entities") or []
         
             if entities is None:
                 entities = []
@@ -227,13 +219,10 @@ class EvaluationPipeline:
                     self.adjudicator.decide,
                     claim,
                     debate_output
-                )
+                ) or {}
 
-                if adjudicated is None:
-                    adjudicated = {}
-
-                metrics["ESS"] = adjudicated.get("support_score", metrics["ESS"])
-                metrics["ECS"] = adjudicated.get("contradiction_score", metrics["ECS"])
+                metrics["ESS"] = adjudicated.get("support_score", metrics.get("ESS", 0))
+                metrics["ECS"] = adjudicated.get("contradiction_score", metrics.get("ECS", 0))
 
                 if "variances" in adjudicated:
                     variances.update(adjudicated["variances"])
@@ -246,5 +235,4 @@ class EvaluationPipeline:
             "credibility": metric_outputs["final_score"],
             "entities": entities,
             "mode": "full"
-            #"raw_judgments": metric_outputs.get("raw_judgments")
         }
