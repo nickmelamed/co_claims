@@ -14,8 +14,53 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.append(ROOT)
 
 from RAGService import retrieve_fn
-from gold.gold_evaluation import normalize_evidence
 from eval.config import build_pipeline
+from eval.evaluator.deterministic.source_types import extract_domain
+
+# evidence normalization
+def parse_time_safe(date_str):
+    if not date_str:
+        return None
+    try:
+        return datetime.fromisoformat(date_str)
+    except:
+        return None
+
+def normalize_evidence(evidence_list):
+    normalized = []
+
+    for e in evidence_list:
+        url = e.get("url", "")
+        raw_type = (e.get("source_type") or "").lower()
+
+        domain = e.get("domain")
+        if not domain or domain == "unknown":
+            if url:
+                domain = extract_domain(url)
+            else:
+                domain = "unknown"
+
+        # source type normalization
+        if raw_type in ["10-k", "10k", "10-q", "10q"]:
+            source_type = "financial_filing"
+        elif raw_type in ["news", "news_article"]:
+            source_type = "news_article"
+        else:
+            source_type = raw_type or "unknown"
+
+        relevance = e.get("relevance")
+        if relevance is None:
+            relevance = e.get("score", 0.5)
+
+        normalized.append({
+            "text": e.get("text", ""),
+            "timestamp": parse_time_safe(e.get("timestamp") or e.get("date")),
+            "domain": domain,
+            "source_type": source_type,
+            "relevance": relevance
+        })
+
+    return normalized
 
 
 # metric comparison
