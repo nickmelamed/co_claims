@@ -68,6 +68,14 @@ st.markdown("""
     [data-testid="stSpinner"] div {
         border-color: #f59e0b transparent transparent transparent !important;
     }
+
+    /* Fix markdown text color in chat messages */
+    [data-testid="stChatMessage"] p,
+    [data-testid="stChatMessage"] li,
+    [data-testid="stChatMessage"] ul,
+    [data-testid="stChatMessage"] ol {
+        color: #ffffff !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
