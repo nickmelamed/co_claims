@@ -89,7 +89,7 @@ class EscalationRouter:
             actions.update(["debate"])
 
         # Claim refinement
-        if "CMS_var" in unstable:
+        if "CMS_var" in unstable and evidence_count > 2:
             actions.update(["refine_claim"])
 
         # Language ambiguity

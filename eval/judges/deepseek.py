@@ -1,20 +1,43 @@
+import re
 import json 
-from judges.base_judge import BaseJudge
+from .base_judge import BaseJudge
+
 
 class DeepSeekJudge(BaseJudge):
     def __init__(self, client):
         self.client = client
 
     def evaluate(self, prompt):
-        text = self.client.chat(
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0
+        response = self.client.chat(
+            prompt,
+            0.0,     
+            500      
         )
-        return self._parse(text)
+
+        print(self.client.chat("Say hello"))
+
+        print("=== RAW RESPONSE FROM CLIENT ===")
+        print(response)
+
+        return self._parse(response)
 
     def _parse(self, response):
         try:
-            text = response.choices[0].message.content
-            return json.loads(text.split("<json>")[-1])
-        except:
-            return {"error": True}
+            text = str(response)
+
+            # 1. Try <json> tags
+            match = re.search(r"<json>(.*?)</json>", text, re.DOTALL)
+            if match:
+                return json.loads(match.group(1))
+
+            # 2. Fallback: try raw JSON extraction
+            match = re.search(r"\{.*\}", text, re.DOTALL)
+            if match:
+                return json.loads(match.group(0))
+
+            print("⚠️ NO JSON FOUND AT ALL")
+            return {}
+
+        except Exception as e:
+            print("❌ PARSE FAILED:", e)
+            return {}

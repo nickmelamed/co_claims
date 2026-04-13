@@ -1,0 +1,39 @@
+# Python environments (THIS IS YOUR MAIN ISSUE)
+coclaims_aws/
+coclaims/
+venv/
+.venv/
+env/
+lib/
+lib64/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# HuggingFace / model caches
+.cache/
+.huggingface/
+hf_cache/
+
+# Tests (this is where networkx tests came from)
+**/tests/
+
+# Git
+.git/
+.gitignore
+
+# Logs
+logs/
+
+# Data files (don't send multi-MB CSVs to Docker daemon)
+*.csv
+gold/
+
+# Eval data / notebooks
+*.ipynb
+
+# OS
+.DS_Store
+Thumbs.db

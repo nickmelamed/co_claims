@@ -1,44 +1,73 @@
-# TODO need to edit the output based on desired uses 
 import re
-from datetime import datetime
+from datetime import datetime, UTC
+import json
 
-STRUCTURE_PROMPT = """
-Parse the claim into structured components.
+ENTITY_EXTRACTION_PROMPT = """
+Extract key entities from the claim.
+
+Definition:
+- Entities = companies, people, products, locations, or measurable concepts
+
+Rules:
+- Return ONLY a JSON list
+- No explanations
+- No duplicates
+- Keep entities short and normalized
 
 Claim:
 {claim}
 
-Output JSON:
-{{
-  "entities": [],
-  "metrics": [],
-  "direction": "increase/decrease/none",
-  "scope": "broad/specific",
-  "modality": "strong/hedged",
-  "decomposed_claims": []
-}}
+Output:
+["entity1", "entity2", ...]
 """
 
 class ClaimReasoner:
     def __init__(self, judge):
         self.judge = judge
 
+    def _safe_parse_list(self, text):
+        try:
+            return json.loads(text)
+        except:
+            match = re.search(r"\[.*\]", text, re.DOTALL)
+            if match:
+                try:
+                    return json.loads(match.group())
+                except:
+                    return []
+        return []
+
+    def extract_entities(self, claim):
+        try:
+            response = self.judge.evaluate(
+                ENTITY_EXTRACTION_PROMPT.format(claim=claim)
+            )
+
+            # Handle cases where model returns string
+            if isinstance(response, str):
+                entities = self._safe_parse_list(response)
+            else:
+                entities = response
+
+            if not isinstance(entities, list):
+                return []
+
+            # normalize
+            return [
+                e.strip().lower()
+                for e in entities
+                if isinstance(e, str) and len(e.strip()) > 0
+            ]
+
+        except Exception:
+            return []
+
     def extract_time(self, claim):
         match = re.search(r"(20\d{2})", claim)
         if match:
             return datetime(int(match.group(1)), 1, 1)
 
-        return datetime.utcnow()
-
-    def structure(self, claim):
-        structured = self.judge.evaluate(
-            STRUCTURE_PROMPT.format(claim=claim)
-        )
-
-        # inject deterministic time
-        structured["claim_time"] = self.extract_time(claim)
-
-        return structured
+        return datetime.now(UTC)
     
     def rephrase(self, claim):
         prompt = """

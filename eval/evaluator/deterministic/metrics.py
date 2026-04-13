@@ -1,23 +1,48 @@
 import math
+from datetime import datetime, timezone
 import numpy as np
+from itertools import combinations
+from .support import SupportScorer
+from .contradiction import ContradictionScorer
+
+# config 
 
 EPS = 1e-6
 K_EVIDENCE = 5
+
+HEDGE_TERMS = {
+    "may", "might", "could", "can", "suggests", "appears",
+    "likely", "potentially", "approximately", "generally", "often"
+}
+
+
+
+def _make_aware(dt):
+    """Ensure a datetime is timezone-aware (default to UTC if naive)."""
+    if dt is not None and dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt
 
 class DeterministicMetrics:
     def __init__(
         self,
         k_evidence: int = 5,
-        half_life: float = 365.0,
+        half_life: float = 90.0,
         epsilon: float = 1e-6,
+        hedge_lexicon=HEDGE_TERMS,
         type_weight_fn=None,
         verifiable_fn=None,
         time_fn=None,
         normalize_scores: bool = True,
+        support=None,
+        contradiction=None
     ):
         self.K_EVIDENCE = k_evidence
         self.HALF_LIFE = half_life
         self.EPS = epsilon
+        self.HEDGE_LEXICON = hedge_lexicon
+        self.support = SupportScorer()
+        self.contradiction = ContradictionScorer()
 
         # from source_types.py
         self.type_weight_fn = type_weight_fn
@@ -33,6 +58,8 @@ class DeterministicMetrics:
 
     def _clip(self, x):
         return max(0.0, min(1.0, x))
+    
+    ### used in every evaluation ###
 
     def cscope(self, entities):
             n = len(entities)
@@ -44,27 +71,46 @@ class DeterministicMetrics:
     def ers(self, claim_time, evidence_times, half_life=90):
         if not evidence_times:
             return 0
-    
-        tau = half_life * 84600 # convert days to seconds 
-        
-        scores = []
-        for t in evidence_times:
-             delta = (claim_time - t).total_seconds()
-             delta = max(0, delta)
 
-             score = np.exp(-delta * np.log(2) / tau)
-             scores.append(score)
-        return np.mean(scores)
+        tau = half_life * 86400
+
+        claim_time = _make_aware(claim_time)
+        valid_times = [_make_aware(t) for t in evidence_times if t is not None]
+
+        scores = []
+        for t in valid_times:
+            delta = (claim_time - t).total_seconds()
+            delta = max(0, delta)
+
+            score = np.exp(-delta * np.log(2) / tau)
+            scores.append(score)
+
+        if not scores:
+            base_score = 0.5  # neutral fallback
+        else:
+            base_score = np.mean(scores)
+
+        coverage = len(valid_times) / len(evidence_times)
+
+        # combine both fallback and coverage weighting 
+        return self._clip(0.7 * base_score + 0.3 * (base_score * coverage))
+
 
     def ests(self, relevances, source_types):
-        if not source_types:
-             return 0
+        if not relevances or not source_types:
+            return 0
 
         weights = [self.type_weight_fn(t) for t in source_types]
 
+        # base score
         num = sum(r * w for r, w in zip(relevances, weights))
         denom = sum(relevances) + self.EPS
-        return self._clip(num / denom)
+        base_score = num / denom
+
+        # coverage = how many sources are meaningfully typed
+        coverage = sum(1 for t in source_types if t != "unknown") / len(source_types)
+
+        return self._clip(base_score * coverage)
 
     def eags(self, supports):
         if not supports:
@@ -75,15 +121,73 @@ class DeterministicMetrics:
 
         return 1 - variance
 
-    def srs(self, domains):
-            if not domains:
-                return 0
+    def sds(self, domains):
+        if not domains:
+            return 0
 
-            return len(set(domains)) / len(domains)
+        valid_domains = [d for d in domains if d and d != "unknown"]
+
+        if not valid_domains:
+            return 0
+
+        diversity = len(set(valid_domains)) / len(valid_domains)
+
+        coverage = len(valid_domains) / len(domains)
+
+        # small fallback: treat unknowns as weak unique sources
+        fallback_diversity = len(set(domains)) / len(domains)
+
+        return self._clip(0.8 * diversity * coverage + 0.2 * fallback_diversity)
 
     def evs(self, source_types):
         if not source_types:
             return 0
 
         flags = [self.verifiable_fn(s) for s in source_types]
-        return sum(flags) / len(flags)
+
+        # base score
+        base_score = sum(flags) / len(flags)
+
+        # coverage = how many sources are classified
+        coverage = sum(1 for s in source_types if s != "unknown") / len(source_types)
+
+        return self._clip(base_score * coverage)
+    
+    ### used only if we are running the deterministic-only baseline 
+    def hls(self, claim_f):
+        tokens = claim_f["tokens"]
+        if not tokens:
+            return 1.0
+
+        hedge_count = sum(1 for t in tokens if t in self.HEDGE_LEXICON)
+        return hedge_count / len(tokens)
+    
+    def cms(self, entities):
+        weights = []
+        for e in entities:
+            if any(char.isdigit() for char in e):
+                weights.append(1.0)
+            else:
+                weights.append(0.0)
+        return sum(weights) / max(1, len(entities))
+    
+    def lcs(self, claim_f):
+        doc = claim_f["doc"]
+        props = [sent.text for sent in doc.sents]
+
+        if len(props) < 2:
+            return 1.0
+
+        scores = []
+        for p1, p2 in combinations(props, 2):
+            f1 = {"tokens": set(p1.lower().split()), "entities": claim_f["entities"]}
+            f2 = {"tokens": set(p2.lower().split()), "entities": claim_f["entities"]}
+            scores.append(self.contradiction.score(f1, f2))
+
+        return 1 - (sum(scores) / (len(scores) + EPS)) 
+    
+    def ess(self, supports, relevances):
+        return self.weighted_avg(supports, relevances)
+
+    def ecs(self, contradictions, relevances):
+        return self.weighted_avg(contradictions, relevances)

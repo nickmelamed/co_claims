@@ -1,50 +1,41 @@
-import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM
+import boto3
 
-class LocalLLMClient:
-    def __init__(self, model_name: str):
-        self.device = "mps" if torch.backends.mps.is_available() else "cpu"
+import os
+import boto3
 
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+_bedrock_client = None
 
-        self.model = AutoModelForCausalLM.from_pretrained(
-            model_name,
-            torch_dtype=torch.float16 if self.device == "mps" else torch.float32,
-            device_map={"": self.device}
+
+def get_bedrock_client():
+    global _bedrock_client
+
+    if _bedrock_client is None:
+        _bedrock_client = boto3.client(
+            "bedrock-runtime",
+            region_name=os.getenv("AWS_REGION", "us-east-1")
         )
 
-    def chat(self, messages, temperature=0.0, max_tokens=512):
-        prompt = self._format_chat(messages)
+    return _bedrock_client
 
-        inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
 
-        with torch.no_grad():
-            outputs = self.model.generate(
-                **inputs,
-                max_new_tokens=max_tokens,
-                temperature=temperature,
-                do_sample=temperature > 0,
-                pad_token_id=self.tokenizer.eos_token_id
-            )
+class BedrockClient:
+    def __init__(self, model_id):
+        self.model_id = model_id
+        self.client = get_bedrock_client()
 
-        decoded = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
+    def chat(self, prompt: str, temperature=0.0, max_tokens=512):
+        response = self.client.converse(
+            modelId=self.model_id,
+            messages=[{
+                "role": "user",
+                "content": [
+                    {"text": prompt}
+                ]
+            }],
+            inferenceConfig={
+                "maxTokens": max_tokens,
+                "temperature": temperature
+            }
+        )
 
-        # Return only the generated part (optional cleanup)
-        return decoded[len(prompt):].strip()
-
-    def _format_chat(self, messages):
-        # Simple chat format (works across most instruct models)
-        formatted = ""
-        for m in messages:
-            role = m["role"]
-            content = m["content"]
-
-            if role == "system":
-                formatted += f"[SYSTEM]\n{content}\n"
-            elif role == "user":
-                formatted += f"[USER]\n{content}\n"
-            elif role == "assistant":
-                formatted += f"[ASSISTANT]\n{content}\n"
-
-        formatted += "[ASSISTANT]\n"
-        return formatted
+        return response["output"]["message"]["content"][0]["text"]
