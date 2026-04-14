@@ -27,5 +27,13 @@ hf_cache/
 # Logs
 logs/
 
+# Data files (don't send multi-MB CSVs to Docker daemon)
+*.csv
+gold/
+
+# Eval data / notebooks
+*.ipynb
+
 # OS
 .DS_Store
+Thumbs.db

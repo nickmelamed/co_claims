@@ -34,6 +34,7 @@ class RAGSearcher:
         self.qdrant = QdrantClient(
             url=self.qdrant_url,
             api_key=self.qdrant_api_key,
+            timeout=120,
         )
 
     def embed_query(self, query: str) -> List[float]:
