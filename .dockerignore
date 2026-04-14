@@ -1,9 +1,9 @@
 .git
 **/__pycache__
 **/.DS_Store
-co_claims/datasets/scraped_articles
-co_claims/datasets/parquet_by_domain
-co_claims/datasets/parquet_by_domain.zip
-co_claims/datasets/*.parquet
-co_claims/datasets/*.zip
+datasets/scraped_articles
+datasets/parquet_by_domain
+datasets/parquet_by_domain.zip
+datasets/*.parquet
+datasets/*.zip
 *.ipynb

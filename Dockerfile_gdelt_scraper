@@ -11,4 +11,4 @@ RUN pip install --no-cache-dir -r /app/requirements.txt
 
 COPY . /app
 
-CMD ["python", "co_claims/datasets/scraper_s3.py", "--resume"]
+CMD ["python", "co_claims/datasets/scraper_s3.py", "--resume", "--continuous"]
